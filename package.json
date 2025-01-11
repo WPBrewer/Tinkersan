@@ -24,19 +24,28 @@
     "Other"
   ],
   "activationEvents": [
-    "workspaceContains:**/.tinkerwp/**",
-    "onLanguage:php"
+    "onStartupFinished"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "tinkerwp.run",
-        "title": "TinkerWP: Run Current File"
+        "command": "tinkerwp.newFile",
+        "title": "TinkerWP: New PHP File",
+        "category": "TinkerWP"
       },
       {
-        "command": "tinkerwp.newTinker",
-        "title": "TinkerWP: New Tinker File"
+        "command": "tinkerwp.run",
+        "title": "TinkerWP: Run PHP Code",
+        "category": "TinkerWP"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "tinkerwp.run",
+        "key": "ctrl+enter",
+        "mac": "cmd+enter",
+        "when": "editorTextFocus && editorLangId == php"
       }
     ],
     "configuration": {
@@ -83,5 +92,8 @@
   },
   "requirements": {
     "psysh": "^0.11.0"
+  },
+  "dependencies": {
+    "monaco-editor": "^0.45.0"
   }
 } 

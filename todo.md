@@ -6,3 +6,6 @@ Tinkerwell https://tinkerwell.app/
 WP Console https://wordpress.org/plugins/wp-console/
 
 
+# current feature
+
+- [x] User could create a php file in the .tinkerwp folder an run it

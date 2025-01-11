@@ -1,145 +1,91 @@
 import * as vscode from 'vscode';
+import { PhpExecutor } from './PhpExecutor';
+import * as path from 'path';
+import * as fs from 'fs';
 
 export class TinkerPanel {
     public static currentPanel: TinkerPanel | undefined;
-    private readonly _panel: vscode.WebviewPanel;
-    private _disposables: vscode.Disposable[] = [];
+    private editor: vscode.TextEditor | undefined;
+    private outputChannel: vscode.OutputChannel;
+    private phpExecutor: PhpExecutor;
+    private disposables: vscode.Disposable[] = [];
 
-    private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
-        this._panel = panel;
-        this._panel.webview.html = this._getWebviewContent();
-        this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
-        
-        // Handle messages from the webview
-        this._panel.webview.onDidReceiveMessage(
-            async message => {
-                switch (message.command) {
-                    case 'runCode':
-                        // TODO: Implement code running
-                        break;
-                }
-            },
-            null,
-            this._disposables
-        );
+    private constructor() {
+        this.phpExecutor = new PhpExecutor();
+        this.outputChannel = vscode.window.createOutputChannel('TinkerWP');
     }
 
-    public static createOrShow(extensionUri: vscode.Uri) {
-        const column = vscode.window.activeTextEditor
-            ? vscode.window.activeTextEditor.viewColumn
-            : undefined;
-
+    public static async createOrShow() {
         if (TinkerPanel.currentPanel) {
-            TinkerPanel.currentPanel._panel.reveal(column);
+            TinkerPanel.currentPanel.outputChannel.show();
             return;
         }
 
-        const panel = vscode.window.createWebviewPanel(
-            'tinkerPhp',
-            'TinkerWP',
-            column || vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true,
-            }
-        );
+        const panel = new TinkerPanel();
+        TinkerPanel.currentPanel = panel;
 
-        TinkerPanel.currentPanel = new TinkerPanel(panel, extensionUri);
+        // Create a new PHP file in .tinkerwp
+        const wpPath = panel.phpExecutor.getWordPressPath();
+        const tinkerPath = path.join(wpPath, '.tinkerwp');
+        if (!fs.existsSync(tinkerPath)) {
+            fs.mkdirSync(tinkerPath, { recursive: true });
+        }
+
+        const fileName = `tinker-${Date.now()}.php`;
+        const filePath = path.join(tinkerPath, fileName);
+        fs.writeFileSync(filePath, '<?php\n\n// Your PHP code here\n');
+
+        // Open the file in editor
+        const document = await vscode.workspace.openTextDocument(filePath);
+        panel.editor = await vscode.window.showTextDocument(document, {
+            viewColumn: vscode.ViewColumn.One,
+            preview: false
+        });
+
+        // Show output channel
+        panel.outputChannel.show(true);
+
+        // Add status bar item
+        const runButton = vscode.window.createStatusBarItem(
+            vscode.StatusBarAlignment.Right,
+            100
+        );
+        runButton.text = '$(play) Run PHP';
+        runButton.tooltip = 'Run PHP code (⌘+Enter)';
+        runButton.command = 'tinkerwp.run';
+        runButton.show();
+        panel.disposables.push(runButton);
+
+        // Register keyboard shortcut
+        panel.disposables.push(
+            vscode.commands.registerCommand('tinkerwp.runShortcut', () => {
+                if (panel.editor && panel.editor.document.languageId === 'php') {
+                    panel.runCode();
+                }
+            })
+        );
     }
 
-    private _getWebviewContent() {
-        return `<!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>TinkerWP</title>
-            <style>
-                body {
-                    display: flex;
-                    flex-direction: column;
-                    height: 100vh;
-                    margin: 0;
-                    padding: 10px;
-                }
-                #editor {
-                    height: 70%;
-                    width: 100%;
-                    border: 1px solid var(--vscode-editor-lineHighlightBorder);
-                    margin-bottom: 10px;
-                }
-                #output {
-                    height: 30%;
-                    width: 100%;
-                    background: var(--vscode-editor-background);
-                    border: 1px solid var(--vscode-editor-lineHighlightBorder);
-                    color: var(--vscode-editor-foreground);
-                    padding: 10px;
-                    font-family: monospace;
-                    overflow: auto;
-                }
-                .toolbar {
-                    padding: 10px 0;
-                    display: flex;
-                    gap: 10px;
-                }
-                button {
-                    background: var(--vscode-button-background);
-                    color: var(--vscode-button-foreground);
-                    border: none;
-                    padding: 8px 12px;
-                    cursor: pointer;
-                }
-                button:hover {
-                    background: var(--vscode-button-hoverBackground);
-                }
-            </style>
-        </head>
-        <body>
-            <div class="toolbar">
-                <button id="run">Run Code (⌘+Enter)</button>
-                <button id="save">Save</button>
-                <button id="clear">Clear Output</button>
-            </div>
-            <div id="editor"></div>
-            <div id="output"></div>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.33.0/min/vs/loader.js"></script>
-            <script>
-                require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.33.0/min/vs' }});
-                require(['vs/editor/editor.main'], function() {
-                    const editor = monaco.editor.create(document.getElementById('editor'), {
-                        value: '<?php\\n\\n// Your PHP code here\\n',
-                        language: 'php',
-                        theme: 'vs-dark',
-                        minimap: { enabled: false }
-                    });
+    public async runCode() {
+        if (!this.editor) {
+            return;
+        }
 
-                    document.getElementById('run').addEventListener('click', () => {
-                        const code = editor.getValue();
-                        vscode.postMessage({
-                            command: 'runCode',
-                            code: code
-                        });
-                    });
+        const code = this.editor.document.getText();
+        this.outputChannel.clear();
+        this.outputChannel.appendLine('Running code...\n');
 
-                    // Add keyboard shortcut
-                    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
-                        document.getElementById('run').click();
-                    });
-                });
-            </script>
-        </body>
-        </html>`;
+        try {
+            const result = await this.phpExecutor.execute(code);
+            this.outputChannel.appendLine(result);
+        } catch (error: any) {
+            this.outputChannel.appendLine(`Error: ${error.message}`);
+        }
     }
 
     public dispose() {
         TinkerPanel.currentPanel = undefined;
-        this._panel.dispose();
-        while (this._disposables.length) {
-            const x = this._disposables.pop();
-            if (x) {
-                x.dispose();
-            }
-        }
+        this.outputChannel.dispose();
+        this.disposables.forEach(d => d.dispose());
     }
 } 
