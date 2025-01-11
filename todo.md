@@ -9,3 +9,5 @@ WP Console https://wordpress.org/plugins/wp-console/
 # current feature
 
 - [x] User could create a php file in the .tinkerwp folder an run it
+- [x] User could create a snippet file in the .tinkerwp/snippets
+- [ ] User could load a saved snippet file in the .tinkerwp/snippets

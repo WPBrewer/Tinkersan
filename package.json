@@ -38,6 +38,16 @@
         "command": "tinkerwp.run",
         "title": "TinkerWP: Run PHP Code",
         "category": "TinkerWP"
+      },
+      {
+        "command": "tinkerwp.saveSnippet",
+        "title": "TinkerWP: Save as Snippet",
+        "category": "TinkerWP"
+      },
+      {
+        "command": "tinkerwp.loadSnippet",
+        "title": "TinkerWP: Load Snippet",
+        "category": "TinkerWP"
       }
     ],
     "keybindings": [
@@ -65,6 +75,11 @@
           "type": "boolean",
           "default": false,
           "description": "Enable table view for array/object output"
+        },
+        "tinkerwp.snippetsFolder": {
+          "type": "string",
+          "default": "snippets",
+          "description": "Folder name for saved snippets (relative to .tinkerwp)"
         }
       }
     }
