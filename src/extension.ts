@@ -68,22 +68,60 @@ export function activate(context: vscode.ExtensionContext) {
         try {
             const code = await phpExecutor.loadSnippet();
             if (code) {
-                // Create a new file with the snippet
-                await TinkerPanel.createOrShow();
                 const editor = vscode.window.activeTextEditor;
                 if (editor) {
+                    // Insert at current cursor position
+                    const position = editor.selection.active;
                     await editor.edit(editBuilder => {
-                        const fullText = editor.document.getText();
-                        const fullRange = new vscode.Range(
-                            editor.document.positionAt(0),
-                            editor.document.positionAt(fullText.length)
-                        );
-                        editBuilder.replace(fullRange, `<?php\n\n${code}`);
+                        editBuilder.insert(position, code);
                     });
+                } else {
+                    // If no editor is active, create new file
+                    await TinkerPanel.createOrShow();
+                    const newEditor = vscode.window.activeTextEditor;
+                    if (newEditor) {
+                        await newEditor.edit(editBuilder => {
+                            const fullText = newEditor.document.getText();
+                            const startPosition = newEditor.document.positionAt(
+                                fullText.indexOf('// Your PHP code here')
+                            );
+                            const endPosition = newEditor.document.positionAt(
+                                fullText.indexOf('// Your PHP code here') + '// Your PHP code here'.length
+                            );
+                            editBuilder.replace(new vscode.Range(startPosition, endPosition), code);
+                        });
+                    }
                 }
             }
         } catch (error: any) {
             vscode.window.showErrorMessage(`Failed to load snippet: ${error.message}`);
+        }
+    });
+
+    // Register Save Selection as Snippet command
+    let saveSelectionCommand = vscode.commands.registerCommand('tinkerwp.saveSelectionAsSnippet', async () => {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+            vscode.window.showInformationMessage('No active editor');
+            return;
+        }
+
+        if (editor.document.languageId !== 'php') {
+            vscode.window.showInformationMessage('Not a PHP file');
+            return;
+        }
+
+        const selection = editor.selection;
+        if (selection.isEmpty) {
+            vscode.window.showInformationMessage('No code selected');
+            return;
+        }
+
+        try {
+            const selectedCode = editor.document.getText(selection);
+            await phpExecutor.saveAsSnippet(selectedCode);
+        } catch (error: any) {
+            vscode.window.showErrorMessage(`Failed to save snippet: ${error.message}`);
         }
     });
 
@@ -92,6 +130,7 @@ export function activate(context: vscode.ExtensionContext) {
         runCommand,
         saveSnippetCommand,
         loadSnippetCommand,
+        saveSelectionCommand,
         outputChannel
     );
 }

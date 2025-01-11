@@ -45,6 +45,11 @@
         "category": "TinkerWP"
       },
       {
+        "command": "tinkerwp.saveSelectionAsSnippet",
+        "title": "Save Selection as TinkerWP Snippet",
+        "category": "TinkerWP"
+      },
+      {
         "command": "tinkerwp.loadSnippet",
         "title": "TinkerWP: Load Snippet",
         "category": "TinkerWP"
@@ -82,6 +87,15 @@
           "description": "Folder name for saved snippets (relative to .tinkerwp)"
         }
       }
+    },
+    "menus": {
+      "editor/context": [
+        {
+          "when": "editorHasSelection && editorLangId == php",
+          "command": "tinkerwp.saveSelectionAsSnippet",
+          "group": "TinkerWP"
+        }
+      ]
     }
   },
   "scripts": {

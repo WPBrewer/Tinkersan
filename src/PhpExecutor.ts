@@ -4,15 +4,15 @@ import * as fs from 'fs';
 import * as child_process from 'child_process';
 
 interface Snippet {
-    name: string;
-    description: string;
-    code: string;
-    tags: string[];
-    created: number;
+    prefix: string;      // The prefix to use for triggering the snippet
+    body: string[];      // The snippet content as an array of lines
+    description: string; // Description of what the snippet does
+    scope: string;       // Scope where snippet is active (e.g., 'php')
+    tags?: string[];     // Custom field for our tags
 }
 
-interface QuickPickSnippet extends vscode.QuickPickItem {
-    snippet: Snippet;
+interface SnippetFile {
+    [key: string]: Snippet;
 }
 
 export class PhpExecutor {
@@ -140,7 +140,7 @@ try {
 
     public async saveAsSnippet(code: string): Promise<void> {
         const snippetsPath = this.getSnippetsPath();
-        const indexPath = path.join(snippetsPath, 'index.json');
+        const snippetsFile = path.join(snippetsPath, 'snippets.json');
 
         // Get snippet details from user
         const name = await vscode.window.showInputBox({
@@ -150,8 +150,15 @@ try {
 
         if (!name) return;
 
+        const prefix = await vscode.window.showInputBox({
+            prompt: 'Enter trigger text for the snippet',
+            placeHolder: name.toLowerCase().replace(/[^a-z0-9]/g, '_')
+        });
+
+        if (!prefix) return;
+
         const description = await vscode.window.showInputBox({
-            prompt: 'Enter a description (optional)',
+            prompt: 'Enter a description',
             placeHolder: 'What does this snippet do?'
         }) || '';
 
@@ -161,51 +168,56 @@ try {
         });
         const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()) : [];
 
+        // Prepare snippet content
+        const cleanCode = code.replace(/^<\?php\s*/, '').trim();
+        const bodyLines = cleanCode.split('\n');
+
         // Create snippet object
         const snippet: Snippet = {
-            name,
+            prefix,
+            body: bodyLines,
             description,
-            code: code.replace(/^<\?php\s*/, '').trim(),
-            tags,
-            created: Date.now()
+            scope: 'php',
+            tags
         };
 
-        // Save snippet file
-        const snippetPath = path.join(snippetsPath, `${name}.php`);
-        fs.writeFileSync(snippetPath, `<?php\n/**\n * ${description}\n * Tags: ${tags.join(', ')}\n */\n\n${snippet.code}`);
+        // Read existing snippets
+        let snippets: SnippetFile = {};
+        if (fs.existsSync(snippetsFile)) {
+            snippets = JSON.parse(fs.readFileSync(snippetsFile, 'utf8'));
+        }
 
-        // Update index
-        const index = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
-        index.snippets = index.snippets.filter((s: Snippet) => s.name !== name);
-        index.snippets.push(snippet);
-        index.snippets.sort((a: Snippet, b: Snippet) => a.name.localeCompare(b.name));
-        fs.writeFileSync(indexPath, JSON.stringify(index, null, 2));
+        // Add new snippet
+        snippets[name] = snippet;
+
+        // Save snippets file
+        fs.writeFileSync(snippetsFile, JSON.stringify(snippets, null, 2));
 
         vscode.window.showInformationMessage(`Snippet "${name}" saved successfully!`);
     }
 
     public async loadSnippet(): Promise<string | undefined> {
         const snippetsPath = this.getSnippetsPath();
-        const indexPath = path.join(snippetsPath, 'index.json');
+        const snippetsFile = path.join(snippetsPath, 'snippets.json');
 
-        if (!fs.existsSync(indexPath)) {
+        if (!fs.existsSync(snippetsFile)) {
             vscode.window.showErrorMessage('No snippets found');
             return;
         }
 
-        const index = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
-        if (!index.snippets.length) {
+        const snippets: SnippetFile = JSON.parse(fs.readFileSync(snippetsFile, 'utf8'));
+        if (Object.keys(snippets).length === 0) {
             vscode.window.showErrorMessage('No snippets found');
             return;
         }
 
         // Show quick pick with snippets
-        const selected = await vscode.window.showQuickPick<QuickPickSnippet>(
-            index.snippets.map((s: Snippet) => ({
-                label: s.name,
-                description: s.description,
-                detail: s.tags.length ? `Tags: ${s.tags.join(', ')}` : undefined,
-                snippet: s
+        const selected = await vscode.window.showQuickPick(
+            Object.entries(snippets).map(([name, snippet]) => ({
+                label: name,
+                description: snippet.prefix,
+                detail: `${snippet.description}${snippet.tags?.length ? ` (Tags: ${snippet.tags.join(', ')})` : ''}`,
+                snippet
             })),
             {
                 placeHolder: 'Select a snippet to load',
@@ -215,15 +227,8 @@ try {
         );
 
         if (selected) {
-            // Load the actual file to get any updates
-            const snippetPath = path.join(snippetsPath, `${selected.snippet.name}.php`);
-            if (fs.existsSync(snippetPath)) {
-                const content = fs.readFileSync(snippetPath, 'utf8');
-                // Extract code from the file (skip comments)
-                const codeMatch = content.match(/\*\/\s*([\s\S]*)/);
-                return codeMatch ? codeMatch[1].trim() : selected.snippet.code;
-            }
-            return selected.snippet.code;
+            // Just return the body lines joined with newlines
+            return selected.snippet.body.join('\n');
         }
     }
 } 
