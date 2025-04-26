@@ -8,7 +8,7 @@ export class TinkerEditorProvider implements vscode.CustomTextEditorProvider {
         return vscode.window.registerCustomEditorProvider(TinkerEditorProvider.viewType, provider);
     }
 
-    private static readonly viewType = 'tinkerwp.editor';
+    private static readonly viewType = 'tinkersan.editor';
     private readonly phpExecutor: PhpExecutor;
 
     constructor(private readonly context: vscode.ExtensionContext) {
@@ -68,7 +68,7 @@ export class TinkerEditorProvider implements vscode.CustomTextEditorProvider {
             <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>TinkerWP</title>
+                <title>Tinkersan</title>
                 <style>
                     body {
                         padding: 0;
@@ -202,4 +202,4 @@ export class TinkerEditorProvider implements vscode.CustomTextEditorProvider {
             </html>
         `;
     }
-} 
+}

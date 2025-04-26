@@ -3,12 +3,12 @@ import { TinkerPanel } from './TinkerPanel';
 import { PhpExecutor } from './PhpExecutor';
 
 export function activate(context: vscode.ExtensionContext) {
-    console.log('TinkerWP is now active!');
+    console.log('Tinkersan is now active!');
     const phpExecutor = new PhpExecutor();
-    const outputChannel = vscode.window.createOutputChannel('TinkerWP');
+    const outputChannel = vscode.window.createOutputChannel('Tinkersan');
 
     // Register New File command
-    let newFileCommand = vscode.commands.registerCommand('tinkerwp.newFile', async () => {
+    let newFileCommand = vscode.commands.registerCommand('tinkersan.newFile', async () => {
         try {
             await TinkerPanel.createOrShow();
         } catch (error: any) {
@@ -17,7 +17,7 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     // Register Run command
-    let runCommand = vscode.commands.registerCommand('tinkerwp.run', async () => {
+    let runCommand = vscode.commands.registerCommand('tinkersan.run', async () => {
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
             vscode.window.showInformationMessage('No active editor');
@@ -43,7 +43,7 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     // Register Save Snippet command
-    let saveSnippetCommand = vscode.commands.registerCommand('tinkerwp.saveSnippet', async () => {
+    let saveSnippetCommand = vscode.commands.registerCommand('tinkersan.saveSnippet', async () => {
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
             vscode.window.showInformationMessage('No active editor');
@@ -64,7 +64,7 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     // Register Load Snippet command
-    let loadSnippetCommand = vscode.commands.registerCommand('tinkerwp.loadSnippet', async () => {
+    let loadSnippetCommand = vscode.commands.registerCommand('tinkersan.loadSnippet', async () => {
         try {
             const code = await phpExecutor.loadSnippet();
             if (code) {
@@ -99,7 +99,7 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     // Register Save Selection as Snippet command
-    let saveSelectionCommand = vscode.commands.registerCommand('tinkerwp.saveSelectionAsSnippet', async () => {
+    let saveSelectionCommand = vscode.commands.registerCommand('tinkersan.saveSelectionAsSnippet', async () => {
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
             vscode.window.showInformationMessage('No active editor');

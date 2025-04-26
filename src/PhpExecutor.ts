@@ -17,11 +17,11 @@ interface SnippetFile {
 
 export class PhpExecutor {
     private _getWordPressPath(): string {
-        const config = vscode.workspace.getConfiguration('tinkerwp');
+        const config = vscode.workspace.getConfiguration('tinkersan');
         const wpPath = config.get<string>('wordpressPath');
         
         if (!wpPath) {
-            throw new Error('WordPress path not configured! Please set tinkerwp.wordpressPath in settings.');
+            throw new Error('WordPress path not configured! Please set tinkersan.wordpressPath in settings.');
         }
         
         return wpPath;
@@ -33,7 +33,7 @@ export class PhpExecutor {
 
     private getTinkerPath(): string {
         const wpPath = this._getWordPressPath();
-        const tinkerPath = path.join(wpPath, '.tinkerwp');
+        const tinkerPath = path.join(wpPath, '.tinkersan');
 
         if (!fs.existsSync(tinkerPath)) {
             fs.mkdirSync(tinkerPath, { recursive: true });
@@ -44,7 +44,7 @@ export class PhpExecutor {
 
     private getSnippetsPath(): string {
         const tinkerPath = this.getTinkerPath();
-        const config = vscode.workspace.getConfiguration('tinkerwp');
+        const config = vscode.workspace.getConfiguration('tinkersan');
         const snippetsFolder = config.get<string>('snippetsFolder') || 'snippets';
         const snippetsPath = path.join(tinkerPath, snippetsFolder);
 

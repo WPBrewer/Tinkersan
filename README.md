@@ -1,4 +1,4 @@
-# TinkerWP
+# Tinkersan
 
 WordPress PHP Tinker for VS Code. Debug and test WordPress/WooCommerce code directly in VS Code.
 
@@ -15,6 +15,6 @@ WordPress PHP Tinker for VS Code. Debug and test WordPress/WooCommerce code dire
 
 ## Usage
 1. Set WordPress path in settings
-2. Create new tinker file: `Ctrl+Shift+P` -> `TinkerWP: New Tinker File`
+2. Create new tinker file: `Ctrl+Shift+P` -> `Tinkersan: New Tinker File`
 3. Write WordPress/WooCommerce code
-4. Run code: `Ctrl+Shift+P` -> `TinkerWP: Run Current File` 
+4. Run code: `Ctrl+Shift+P` -> `Tinkersan: Run Current File` 

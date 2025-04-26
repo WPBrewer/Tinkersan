@@ -12,7 +12,7 @@ export class TinkerPanel {
 
     private constructor() {
         this.phpExecutor = new PhpExecutor();
-        this.outputChannel = vscode.window.createOutputChannel('TinkerWP');
+        this.outputChannel = vscode.window.createOutputChannel('Tinkersan');
     }
 
     public static async createOrShow() {
@@ -24,9 +24,9 @@ export class TinkerPanel {
         const panel = new TinkerPanel();
         TinkerPanel.currentPanel = panel;
 
-        // Create a new PHP file in .tinkerwp
+        // Create a new PHP file in .tinkersan
         const wpPath = panel.phpExecutor.getWordPressPath();
-        const tinkerPath = path.join(wpPath, '.tinkerwp');
+        const tinkerPath = path.join(wpPath, '.tinkersan');
         if (!fs.existsSync(tinkerPath)) {
             fs.mkdirSync(tinkerPath, { recursive: true });
         }
@@ -52,13 +52,13 @@ export class TinkerPanel {
         );
         runButton.text = '$(play) Run PHP';
         runButton.tooltip = 'Run PHP code (⌘+Enter)';
-        runButton.command = 'tinkerwp.run';
+        runButton.command = 'tinkersan.run';
         runButton.show();
         panel.disposables.push(runButton);
 
         // Register keyboard shortcut
         panel.disposables.push(
-            vscode.commands.registerCommand('tinkerwp.runShortcut', () => {
+            vscode.commands.registerCommand('tinkersan.runShortcut', () => {
                 if (panel.editor && panel.editor.document.languageId === 'php') {
                     panel.runCode();
                 }

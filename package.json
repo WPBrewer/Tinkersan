@@ -1,12 +1,12 @@
 {
-  "name": "tinkerwp",
-  "displayName": "TinkerWP",
+  "name": "tinkersan",
+  "displayName": "Tinkersan",
   "description": "WordPress PHP Tinker for VS Code",
   "version": "0.0.1",
   "publisher": "WPBrewer",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/tinkerwp.git"
+    "url": "https://github.com/WPBrewer/tinkersan.git"
   },
   "license": "MIT",
   "keywords": [
@@ -30,61 +30,61 @@
   "contributes": {
     "commands": [
       {
-        "command": "tinkerwp.newFile",
-        "title": "TinkerWP: New PHP File",
-        "category": "TinkerWP"
+        "command": "tinkersan.newFile",
+        "title": "Tinkersan: New PHP File",
+        "category": "Tinkersan"
       },
       {
-        "command": "tinkerwp.run",
-        "title": "TinkerWP: Run PHP Code",
-        "category": "TinkerWP"
+        "command": "tinkersan.run",
+        "title": "Tinkersan: Run PHP Code",
+        "category": "Tinkersan"
       },
       {
-        "command": "tinkerwp.saveSnippet",
-        "title": "TinkerWP: Save as Snippet",
-        "category": "TinkerWP"
+        "command": "tinkersan.saveSnippet",
+        "title": "Tinkersan: Save as Snippet",
+        "category": "Tinkersan"
       },
       {
-        "command": "tinkerwp.saveSelectionAsSnippet",
-        "title": "Save Selection as TinkerWP Snippet",
-        "category": "TinkerWP"
+        "command": "tinkersan.saveSelectionAsSnippet",
+        "title": "Save Selection as Tinkersan Snippet",
+        "category": "Tinkersan"
       },
       {
-        "command": "tinkerwp.loadSnippet",
-        "title": "TinkerWP: Load Snippet",
-        "category": "TinkerWP"
+        "command": "tinkersan.loadSnippet",
+        "title": "Tinkersan: Load Snippet",
+        "category": "Tinkersan"
       }
     ],
     "keybindings": [
       {
-        "command": "tinkerwp.run",
+        "command": "tinkersan.run",
         "key": "ctrl+enter",
         "mac": "cmd+enter",
         "when": "editorTextFocus && editorLangId == php"
       }
     ],
     "configuration": {
-      "title": "TinkerWP",
+      "title": "Tinkersan",
       "properties": {
-        "tinkerwp.wordpressPath": {
+        "tinkersan.wordpressPath": {
           "type": "string",
           "default": "",
           "description": "Path to WordPress installation"
         },
-        "tinkerwp.showDetailLog": {
+        "tinkersan.showDetailLog": {
           "type": "boolean",
           "default": false,
           "description": "Show detailed execution logs"
         },
-        "tinkerwp.enableTableView": {
+        "tinkersan.enableTableView": {
           "type": "boolean",
           "default": false,
           "description": "Enable table view for array/object output"
         },
-        "tinkerwp.snippetsFolder": {
+        "tinkersan.snippetsFolder": {
           "type": "string",
           "default": "snippets",
-          "description": "Folder name for saved snippets (relative to .tinkerwp)"
+          "description": "Folder name for saved snippets (relative to .tinkersan)"
         }
       }
     },
@@ -92,8 +92,8 @@
       "editor/context": [
         {
           "when": "editorHasSelection && editorLangId == php",
-          "command": "tinkerwp.saveSelectionAsSnippet",
-          "group": "TinkerWP"
+          "command": "tinkersan.saveSelectionAsSnippet",
+          "group": "Tinkersan"
         }
       ]
     }
