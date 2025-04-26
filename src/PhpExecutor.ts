@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as child_process from 'child_process';
+import { FrameworkBootstrapperFactory, FrameworkBootstrapper, GenericPhpBootstrapper } from './frameworks';
 
 interface Snippet {
     prefix: string;      // The prefix to use for triggering the snippet
@@ -16,24 +17,57 @@ interface SnippetFile {
 }
 
 export class PhpExecutor {
-    private _getWordPressPath(): string {
+    private _getProjectPath(): string {
         const config = vscode.workspace.getConfiguration('tinkersan');
-        const wpPath = config.get<string>('wordpressPath');
+        const projectPath = config.get<string>('projectPath');
         
-        if (!wpPath) {
-            throw new Error('WordPress path not configured! Please set tinkersan.wordpressPath in settings.');
+        if (!projectPath) {
+            // Try to use the workspace folder as the default project path
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (workspaceFolders && workspaceFolders.length > 0) {
+                return workspaceFolders[0].uri.fsPath;
+            }
+            throw new Error('Project path not configured! Please set tinkersan.projectPath in settings.');
         }
         
-        return wpPath;
+        return projectPath;
     }
 
-    public getWordPressPath(): string {
-        return this._getWordPressPath();
+    private _getFrameworkName(): string {
+        const config = vscode.workspace.getConfiguration('tinkersan');
+        return config.get<string>('framework') || 'auto';
+    }
+
+    private _getFrameworkBootstrapper(): FrameworkBootstrapper {
+        const projectPath = this._getProjectPath();
+        const frameworkName = this._getFrameworkName();
+        
+        if (frameworkName === 'auto') {
+            // Auto-detect framework
+            const bootstrapper = FrameworkBootstrapperFactory.detect(projectPath);
+            if (bootstrapper) {
+                return bootstrapper;
+            }
+            // Fall back to generic PHP if no framework detected
+            return FrameworkBootstrapperFactory.getByName('PHP') || new GenericPhpBootstrapper();
+        } else {
+            // Use specified framework
+            const bootstrapper = FrameworkBootstrapperFactory.getByName(frameworkName);
+            if (bootstrapper) {
+                return bootstrapper;
+            }
+            // Fall back to generic PHP if specified framework not found
+            return FrameworkBootstrapperFactory.getByName('PHP') || new GenericPhpBootstrapper();
+        }
+    }
+
+    public getProjectPath(): string {
+        return this._getProjectPath();
     }
 
     private getTinkerPath(): string {
-        const wpPath = this._getWordPressPath();
-        const tinkerPath = path.join(wpPath, '.tinkersan');
+        const projectPath = this._getProjectPath();
+        const tinkerPath = path.join(projectPath, '.tinkersan');
 
         if (!fs.existsSync(tinkerPath)) {
             fs.mkdirSync(tinkerPath, { recursive: true });
@@ -71,21 +105,21 @@ export class PhpExecutor {
 
     public async execute(code: string): Promise<string> {
         try {
-            const wpPath = this._getWordPressPath();
+            const projectPath = this._getProjectPath();
+            const bootstrapper = this._getFrameworkBootstrapper();
             
             // Create temporary execution wrapper
             const wrapperCode = `<?php
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
 
-if (!file_exists('${path.join(wpPath, 'wp-load.php')}')) {
-    die('WordPress wp-load.php not found. Check your path configuration.');
-}
+// Start output buffering to capture PHP errors
+ob_start();
 
-require_once '${path.join(wpPath, 'wp-load.php')}';
+${bootstrapper.getBootstrapCode(projectPath)}
 
 function tinker_output($value) {
-    if ($value === null) return '';
+    if ($value === null) return 'null';
     if (is_array($value) || is_object($value)) {
         return print_r($value, true);
     }
@@ -96,7 +130,7 @@ function tinker_output($value) {
 }
 
 try {
-    ob_start();
+    // User code execution
     $tinker_result = (function() {
         ${code.replace(/^<\?php\s*/, '').trim()}
     })();
@@ -108,6 +142,7 @@ try {
         echo tinker_output($tinker_result);
     }
 } catch (Throwable $e) {
+    ob_end_clean();
     echo "Error: " . $e->getMessage() . " in line " . $e->getLine();
 }`;
             
@@ -121,9 +156,9 @@ try {
                 const output = child_process.execSync(`php "${tempFile}"`, {
                     encoding: 'utf8',
                     maxBuffer: 1024 * 1024 * 10, // 10MB buffer
-                    cwd: wpPath
+                    cwd: projectPath
                 });
-                return output || 'Code executed successfully (no output)';
+                return output || `Code executed successfully with framework: ${bootstrapper.getName()} (no output)`;
             } finally {
                 // Clean up temp file
                 if (fs.existsSync(tempFile)) {
@@ -230,5 +265,10 @@ try {
             // Just return the body lines joined with newlines
             return selected.snippet.body.join('\n');
         }
+    }
+    
+    public getCompletions() {
+        const bootstrapper = this._getFrameworkBootstrapper();
+        return bootstrapper.getCompletions();
     }
 } 

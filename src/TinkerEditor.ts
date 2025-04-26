@@ -62,6 +62,9 @@ export class TinkerEditorProvider implements vscode.CustomTextEditorProvider {
             vscode.Uri.file(path.join(this.context.extensionPath, 'node_modules', 'monaco-editor', 'min'))
         );
 
+        // Get framework completions
+        const frameworkCompletions = JSON.stringify(this.phpExecutor.getCompletions());
+
         return /* html */ `
             <!DOCTYPE html>
             <html>
@@ -135,26 +138,10 @@ export class TinkerEditorProvider implements vscode.CustomTextEditorProvider {
                             scrollBeyondLastLine: false
                         });
 
-                        // Add WordPress completions
+                        // Add framework-specific completions
                         monaco.languages.registerCompletionItemProvider('php', {
                             provideCompletionItems: () => ({
-                                suggestions: [
-                                    {
-                                        label: 'get_post',
-                                        kind: monaco.languages.CompletionItemKind.Function,
-                                        insertText: 'get_post(${1:$post_id})',
-                                        insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-                                        documentation: 'Get post data given a post ID or post object'
-                                    },
-                                    {
-                                        label: 'wc_get_order',
-                                        kind: monaco.languages.CompletionItemKind.Function,
-                                        insertText: 'wc_get_order(${1:$order_id})',
-                                        insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-                                        documentation: 'Get WooCommerce order object'
-                                    },
-                                    // Add more WordPress/WooCommerce functions here
-                                ]
+                                suggestions: ${frameworkCompletions}
                             })
                         });
 
@@ -190,6 +177,7 @@ export class TinkerEditorProvider implements vscode.CustomTextEditorProvider {
                                 break;
                             case 'output':
                                 output.textContent = message.value;
+                                output.style.color = 'var(--vscode-foreground)';
                                 break;
                             case 'error':
                                 output.textContent = 'Error: ' + message.value;

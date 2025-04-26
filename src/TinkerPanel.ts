@@ -25,15 +25,29 @@ export class TinkerPanel {
         TinkerPanel.currentPanel = panel;
 
         // Create a new PHP file in .tinkersan
-        const wpPath = panel.phpExecutor.getWordPressPath();
-        const tinkerPath = path.join(wpPath, '.tinkersan');
+        const projectPath = panel.phpExecutor.getProjectPath();
+        const tinkerPath = path.join(projectPath, '.tinkersan');
         if (!fs.existsSync(tinkerPath)) {
             fs.mkdirSync(tinkerPath, { recursive: true });
         }
 
         const fileName = `tinker-${Date.now()}.php`;
         const filePath = path.join(tinkerPath, fileName);
-        fs.writeFileSync(filePath, '<?php\n\n// Your PHP code here\n');
+        
+        // Get current framework for comment
+        const config = vscode.workspace.getConfiguration('tinkersan');
+        const framework = config.get<string>('framework') || 'auto';
+        
+        // Create starter PHP file with framework comment
+        fs.writeFileSync(filePath, `<?php
+/**
+ * Tinkersan PHP File
+ * Framework: ${framework}
+ * Created: ${new Date().toISOString()}
+ */
+
+// Your PHP code here
+`);
 
         // Open the file in editor
         const document = await vscode.workspace.openTextDocument(filePath);

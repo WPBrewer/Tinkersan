@@ -1,17 +1,18 @@
 {
   "name": "tinkersan",
   "displayName": "Tinkersan",
-  "description": "WordPress PHP Tinker for VS Code",
+  "description": "PHP Tinker for VS Code - Test and debug WordPress, Laravel, and any PHP application",
   "version": "0.0.1",
   "publisher": "WPBrewer",
   "repository": {
     "type": "git",
-    "url": "https://github.com/WPBrewer/tinkersan.git"
+    "url": "https://github.com/yourusername/tinkersan.git"
   },
   "license": "MIT",
   "keywords": [
     "wordpress",
     "php",
+    "laravel",
     "tinker",
     "debug",
     "woocommerce"
@@ -66,10 +67,22 @@
     "configuration": {
       "title": "Tinkersan",
       "properties": {
-        "tinkersan.wordpressPath": {
+        "tinkersan.projectPath": {
           "type": "string",
           "default": "",
-          "description": "Path to WordPress installation"
+          "description": "Path to the PHP project (WordPress, Laravel, or custom PHP project)"
+        },
+        "tinkersan.framework": {
+          "type": "string",
+          "default": "auto",
+          "enum": ["auto", "WordPress", "Laravel", "PHP"],
+          "enumDescriptions": [
+            "Auto-detect the framework from the project structure",
+            "WordPress-specific environment",
+            "Laravel-specific environment",
+            "Generic PHP environment with composer support"
+          ],
+          "description": "The PHP framework to use for code execution"
         },
         "tinkersan.showDetailLog": {
           "type": "boolean",

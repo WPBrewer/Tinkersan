@@ -1,11 +1,31 @@
 import * as vscode from 'vscode';
 import { TinkerPanel } from './TinkerPanel';
 import { PhpExecutor } from './PhpExecutor';
+// Import frameworks to register them
+import './frameworks';
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('Tinkersan is now active!');
     const phpExecutor = new PhpExecutor();
     const outputChannel = vscode.window.createOutputChannel('Tinkersan');
+    
+    // Add status bar indicator with current framework
+    const frameworkIndicator = vscode.window.createStatusBarItem(
+        vscode.StatusBarAlignment.Right,
+        99
+    );
+    updateFrameworkIndicator(frameworkIndicator);
+    frameworkIndicator.show();
+    context.subscriptions.push(frameworkIndicator);
+    
+    // Watch for configuration changes to update the framework indicator
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration('tinkersan.framework')) {
+                updateFrameworkIndicator(frameworkIndicator);
+            }
+        })
+    );
 
     // Register New File command
     let newFileCommand = vscode.commands.registerCommand('tinkersan.newFile', async () => {
@@ -133,6 +153,21 @@ export function activate(context: vscode.ExtensionContext) {
         saveSelectionCommand,
         outputChannel
     );
+}
+
+function updateFrameworkIndicator(statusBarItem: vscode.StatusBarItem) {
+    const config = vscode.workspace.getConfiguration('tinkersan');
+    const framework = config.get<string>('framework') || 'auto';
+    
+    if (framework === 'auto') {
+        statusBarItem.text = '$(sync) PHP [Auto]';
+        statusBarItem.tooltip = 'Tinkersan: Auto-detect framework';
+    } else {
+        statusBarItem.text = `$(code) PHP [${framework}]`;
+        statusBarItem.tooltip = `Tinkersan: Using ${framework} framework`;
+    }
+    
+    statusBarItem.command = 'workbench.action.openSettings';
 }
 
 export function deactivate() {} 
