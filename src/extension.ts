@@ -3,6 +3,7 @@ import { TinkerPanel } from './TinkerPanel';
 import { PhpExecutor } from './PhpExecutor';
 // Import frameworks to register them
 import './frameworks';
+import { loadCustomBootstrappers } from './frameworks';
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('Tinkersan is now active!');
@@ -23,6 +24,12 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.workspace.onDidChangeConfiguration(e => {
             if (e.affectsConfiguration('tinkersan.framework')) {
                 updateFrameworkIndicator(frameworkIndicator);
+            }
+            
+            // Reload custom bootstrappers when configuration changes
+            if (e.affectsConfiguration('tinkersan.customBootstrappers')) {
+                loadCustomBootstrappers();
+                vscode.window.showInformationMessage('Tinkersan custom bootstrappers reloaded');
             }
         })
     );
