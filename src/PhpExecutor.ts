@@ -4,18 +4,6 @@ import * as fs from 'fs';
 import * as child_process from 'child_process';
 import { FrameworkBootstrapperFactory, FrameworkBootstrapper, GenericPhpBootstrapper } from './frameworks';
 
-interface Snippet {
-    prefix: string;      // The prefix to use for triggering the snippet
-    body: string[];      // The snippet content as an array of lines
-    description: string; // Description of what the snippet does
-    scope: string;       // Scope where snippet is active (e.g., 'php')
-    tags?: string[];     // Custom field for our tags
-}
-
-interface SnippetFile {
-    [key: string]: Snippet;
-}
-
 export class PhpExecutor {
     private _getProjectPath(): string {
         const config = vscode.workspace.getConfiguration('tinkersan');
@@ -76,25 +64,7 @@ export class PhpExecutor {
         return tinkerPath;
     }
 
-    private getSnippetsPath(): string {
-        const tinkerPath = this.getTinkerPath();
-        const config = vscode.workspace.getConfiguration('tinkersan');
-        const snippetsFolder = config.get<string>('snippetsFolder') || 'snippets';
-        const snippetsPath = path.join(tinkerPath, snippetsFolder);
-
-        if (!fs.existsSync(snippetsPath)) {
-            fs.mkdirSync(snippetsPath, { recursive: true });
-            // Create index file if it doesn't exist
-            const indexPath = path.join(snippetsPath, 'index.json');
-            if (!fs.existsSync(indexPath)) {
-                fs.writeFileSync(indexPath, JSON.stringify({ snippets: [] }, null, 2));
-            }
-        }
-
-        return snippetsPath;
-    }
-
-    public async saveSnippet(code: string, name?: string): Promise<string> {
+    private async saveTempFile(code: string, name?: string): Promise<string> {
         const tinkerPath = this.getTinkerPath();
         const fileName = name || `tinker-${Date.now()}.php`;
         const filePath = path.join(tinkerPath, fileName);
@@ -146,7 +116,7 @@ try {
     echo "Error: " . $e->getMessage() . " in line " . $e->getLine();
 }`;
             
-            const tempFile = await this.saveSnippet(wrapperCode, `temp-${Date.now()}.php`);
+            const tempFile = await this.saveTempFile(wrapperCode, `temp-${Date.now()}.php`);
             
             try {
                 // Make sure the temp file is readable
@@ -172,103 +142,9 @@ try {
             return `Error: ${error.message}`;
         }
     }
-
-    public async saveAsSnippet(code: string): Promise<void> {
-        const snippetsPath = this.getSnippetsPath();
-        const snippetsFile = path.join(snippetsPath, 'snippets.json');
-
-        // Get snippet details from user
-        const name = await vscode.window.showInputBox({
-            prompt: 'Enter a name for your snippet',
-            placeHolder: 'my-awesome-snippet'
-        });
-
-        if (!name) return;
-
-        const prefix = await vscode.window.showInputBox({
-            prompt: 'Enter trigger text for the snippet',
-            placeHolder: name.toLowerCase().replace(/[^a-z0-9]/g, '_')
-        });
-
-        if (!prefix) return;
-
-        const description = await vscode.window.showInputBox({
-            prompt: 'Enter a description',
-            placeHolder: 'What does this snippet do?'
-        }) || '';
-
-        const tagsInput = await vscode.window.showInputBox({
-            prompt: 'Enter tags (comma-separated)',
-            placeHolder: 'woocommerce, orders, api'
-        });
-        const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()) : [];
-
-        // Prepare snippet content
-        const cleanCode = code.replace(/^<\?php\s*/, '').trim();
-        const bodyLines = cleanCode.split('\n');
-
-        // Create snippet object
-        const snippet: Snippet = {
-            prefix,
-            body: bodyLines,
-            description,
-            scope: 'php',
-            tags
-        };
-
-        // Read existing snippets
-        let snippets: SnippetFile = {};
-        if (fs.existsSync(snippetsFile)) {
-            snippets = JSON.parse(fs.readFileSync(snippetsFile, 'utf8'));
-        }
-
-        // Add new snippet
-        snippets[name] = snippet;
-
-        // Save snippets file
-        fs.writeFileSync(snippetsFile, JSON.stringify(snippets, null, 2));
-
-        vscode.window.showInformationMessage(`Snippet "${name}" saved successfully!`);
-    }
-
-    public async loadSnippet(): Promise<string | undefined> {
-        const snippetsPath = this.getSnippetsPath();
-        const snippetsFile = path.join(snippetsPath, 'snippets.json');
-
-        if (!fs.existsSync(snippetsFile)) {
-            vscode.window.showErrorMessage('No snippets found');
-            return;
-        }
-
-        const snippets: SnippetFile = JSON.parse(fs.readFileSync(snippetsFile, 'utf8'));
-        if (Object.keys(snippets).length === 0) {
-            vscode.window.showErrorMessage('No snippets found');
-            return;
-        }
-
-        // Show quick pick with snippets
-        const selected = await vscode.window.showQuickPick(
-            Object.entries(snippets).map(([name, snippet]) => ({
-                label: name,
-                description: snippet.prefix,
-                detail: `${snippet.description}${snippet.tags?.length ? ` (Tags: ${snippet.tags.join(', ')})` : ''}`,
-                snippet
-            })),
-            {
-                placeHolder: 'Select a snippet to load',
-                matchOnDescription: true,
-                matchOnDetail: true
-            }
-        );
-
-        if (selected) {
-            // Just return the body lines joined with newlines
-            return selected.snippet.body.join('\n');
-        }
-    }
     
     public getCompletions() {
         const bootstrapper = this._getFrameworkBootstrapper();
         return bootstrapper.getCompletions();
     }
-} 
+}

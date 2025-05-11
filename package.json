@@ -39,21 +39,6 @@
         "command": "tinkersan.run",
         "title": "Tinkersan: Run PHP Code",
         "category": "Tinkersan"
-      },
-      {
-        "command": "tinkersan.saveSnippet",
-        "title": "Tinkersan: Save as Snippet",
-        "category": "Tinkersan"
-      },
-      {
-        "command": "tinkersan.saveSelectionAsSnippet",
-        "title": "Save Selection as Tinkersan Snippet",
-        "category": "Tinkersan"
-      },
-      {
-        "command": "tinkersan.loadSnippet",
-        "title": "Tinkersan: Load Snippet",
-        "category": "Tinkersan"
       }
     ],
     "keybindings": [
@@ -94,11 +79,6 @@
           "default": false,
           "description": "Enable table view for array/object output"
         },
-        "tinkersan.snippetsFolder": {
-          "type": "string",
-          "default": "snippets",
-          "description": "Folder name for saved snippets (relative to .tinkersan)"
-        },
         "tinkersan.customBootstrappers": {
           "type": "array",
           "items": {
@@ -108,15 +88,6 @@
           "description": "Paths to custom framework bootstrapper files (.js) that implement the FrameworkBootstrapper interface"
         }
       }
-    },
-    "menus": {
-      "editor/context": [
-        {
-          "when": "editorHasSelection && editorLangId == php",
-          "command": "tinkersan.saveSelectionAsSnippet",
-          "group": "Tinkersan"
-        }
-      ]
     }
   },
   "scripts": {
