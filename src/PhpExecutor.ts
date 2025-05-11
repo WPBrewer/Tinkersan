@@ -75,71 +75,50 @@ export class PhpExecutor {
 
     public async execute(code: string): Promise<string> {
         try {
-            const projectPath = this._getProjectPath();
-            const bootstrapper = this._getFrameworkBootstrapper();
-            
-            // Create temporary execution wrapper
-            const wrapperCode = `<?php
-error_reporting(E_ALL);
-ini_set('display_errors', '1');
+            const projectPath      = this._getProjectPath();
+            const bootstrapper     = this._getFrameworkBootstrapper();
+            const bootstrapCode    = bootstrapper.getBootstrapCode(projectPath);
 
-// Start output buffering to capture PHP errors
-ob_start();
+            const cleanUserCode = code.replace(/^<\?php\s*/, '').trim();
 
-${bootstrapper.getBootstrapCode(projectPath)}
+            const script =
+                `error_reporting(E_ALL);\n` +
+                `ini_set('display_errors', '1');\n\n` +
+                // Start buffering to capture echoes from bootstrap & user code
+                `ob_start();\n\n` +
+                `${bootstrapCode}\n\n` +
+                `$__tinker_result = (function() {\n${cleanUserCode}\n})();\n` +
+                `$__output = ob_get_clean();\n` +
+                `if ($__output) { echo $__output; } elseif ($__tinker_result !== null) {\n` +
+                `    if (is_bool($__tinker_result)) { echo $__tinker_result ? 'true' : 'false'; }\n` +
+                `    elseif (is_scalar($__tinker_result) || $__tinker_result === null) { echo $__tinker_result; }\n` +
+                `    else { echo print_r($__tinker_result, true); }\n` +
+                `}`;
 
-function tinker_output($value) {
-    if ($value === null) return 'null';
-    if (is_array($value) || is_object($value)) {
-        return print_r($value, true);
-    }
-    if (is_bool($value)) {
-        return $value ? 'true' : 'false';
-    }
-    return var_export($value, true);
-}
+            // Determine PsySH binary path
+            const localPsysh = path.join(__dirname, '..', 'vendor', 'bin', 'psysh');
+            const psyshCmd   = fs.existsSync(localPsysh)
+                ? `php \"${localPsysh}\" --no-interaction --raw-output`
+                : 'psysh --no-interaction --raw-output';
 
-try {
-    // User code execution
-    $tinker_result = (function() {
-        ${code.replace(/^<\?php\s*/, '').trim()}
-    })();
-    $output = ob_get_clean();
-    
-    if ($output) {
-        echo $output;
-    } elseif ($tinker_result !== null) {
-        echo tinker_output($tinker_result);
-    }
-} catch (Throwable $e) {
-    ob_end_clean();
-    echo "Error: " . $e->getMessage() . " in line " . $e->getLine();
-}`;
-            
-            const tempFile = await this.saveTempFile(wrapperCode, `temp-${Date.now()}.php`);
-            
-            try {
-                // Make sure the temp file is readable
-                fs.chmodSync(tempFile, '0644');
+            // Run PsySH in non-interactive mode by piping the script into STDIN.
+            const output = child_process.execSync(psyshCmd, {
+                cwd:          projectPath,
+                input:        script,
+                encoding:     'utf8',
+                maxBuffer:    1024 * 1024 * 10 // 10 MB
+            });
 
-                // Execute the code and capture output
-                const output = child_process.execSync(`php "${tempFile}"`, {
-                    encoding: 'utf8',
-                    maxBuffer: 1024 * 1024 * 10, // 10MB buffer
-                    cwd: projectPath
-                });
-                return output || `Code executed successfully with framework: ${bootstrapper.getName()} (no output)`;
-            } finally {
-                // Clean up temp file
-                if (fs.existsSync(tempFile)) {
-                    fs.unlinkSync(tempFile);
-                }
+            return output.trim() || `Code executed successfully with framework: ${bootstrapper.getName()} (no output)`;
+        } catch ( error: any ) {
+            // PsySH prints errors to stdout. Capture both stderr/stdout.
+            if ( error.stdout ) {
+                return error.stdout as string;
             }
-        } catch (error: any) {
-            if (error.stderr) {
-                return `Error: ${error.stderr}`;
+            if ( error.stderr ) {
+                return error.stderr as string;
             }
-            return `Error: ${error.message}`;
+            return error.message;
         }
     }
     
