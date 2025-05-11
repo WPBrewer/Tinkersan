@@ -91,4 +91,4 @@ function updateFrameworkIndicator(statusBarItem: vscode.StatusBarItem) {
     statusBarItem.command = 'workbench.action.openSettings';
 }
 
-export function deactivate() {}
+export function deactivate() {} 

@@ -95,10 +95,10 @@ export class PhpExecutor {
                 `    else { echo print_r($__tinker_result, true); }\n` +
                 `}`;
 
-            // Determine PsySH binary path
-            const localPsysh = path.join(__dirname, '..', 'vendor', 'bin', 'psysh');
-            const psyshCmd   = fs.existsSync(localPsysh)
-                ? `php \"${localPsysh}\" --no-interaction --raw-output`
+            // Determine PsySH binary path (use bundled phar to avoid class conflicts)
+            const pharPath   = path.join(__dirname, '..', 'bin', 'psysh.phar');
+            const psyshCmd   = fs.existsSync(pharPath)
+                ? `php \"${pharPath}\" --no-interaction --raw-output`
                 : 'psysh --no-interaction --raw-output';
 
             // Run PsySH in non-interactive mode by piping the script into STDIN.
@@ -126,4 +126,4 @@ export class PhpExecutor {
         const bootstrapper = this._getFrameworkBootstrapper();
         return bootstrapper.getCompletions();
     }
-}
+} 
