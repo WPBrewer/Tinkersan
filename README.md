@@ -13,13 +13,10 @@ A PHP Tinker Tool for VS Code. Debug and test PHP code in WordPress directly in 
 - PHP 7.4+
 - Framework specific requirements:
   - WordPress: WordPress installation
-  - Laravel: Laravel project with artisan
 
 ## Configuration
 - `tinkersan.projectPath`: Path to the PHP project
-- `tinkersan.framework`: Framework to use (auto/WordPress/Laravel/PHP)
-- `tinkersan.showDetailLog`: Enable detailed logs
-- `tinkersan.enableTableView`: Enable table view for arrays/objects
+- `tinkersan.framework`: Framework to use (WordPress)
 
 ## Usage
 1. Set project path in settings (or it will use your workspace root)

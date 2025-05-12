@@ -59,33 +59,12 @@
         },
         "tinkersan.framework": {
           "type": "string",
-          "default": "auto",
-          "enum": ["auto", "WordPress", "Laravel", "PHP"],
+          "default": "WordPress",
+          "enum": ["WordPress"],
           "enumDescriptions": [
-            "Auto-detect the framework from the project structure",
-            "WordPress-specific environment",
-            "Laravel-specific environment",
-            "Generic PHP environment with composer support"
+            "WordPress-specific environment"
           ],
           "description": "The PHP framework to use for code execution"
-        },
-        "tinkersan.showDetailLog": {
-          "type": "boolean",
-          "default": false,
-          "description": "Show detailed execution logs"
-        },
-        "tinkersan.enableTableView": {
-          "type": "boolean",
-          "default": false,
-          "description": "Enable table view for array/object output"
-        },
-        "tinkersan.customBootstrappers": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": [],
-          "description": "Paths to custom framework bootstrapper files (.js) that implement the FrameworkBootstrapper interface"
         }
       }
     }
