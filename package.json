@@ -1,7 +1,7 @@
 {
   "name": "tinkersan",
   "displayName": "Tinkersan",
-  "description": "PHP Tinker for VS Code - Test and debug WordPress",
+  "description": "PHP Tinker for VS Code - Test and debug WordPress made easy!",
   "version": "0.0.1",
   "publisher": "WPBrewer",
   "repository": {
@@ -55,7 +55,7 @@
         "tinkersan.projectPath": {
           "type": "string",
           "default": "",
-          "description": "Path to the PHP project (WordPress, Laravel, or custom PHP project)"
+          "description": "Path to the PHP project (WordPress root folder)"
         },
         "tinkersan.framework": {
           "type": "string",
