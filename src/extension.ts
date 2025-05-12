@@ -4,11 +4,15 @@ import { PhpExecutor } from './PhpExecutor';
 // Import frameworks to register them
 import './frameworks';
 import { loadCustomBootstrappers } from './frameworks';
+import { TinkerResultsProvider } from './TinkerResultsProvider';
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('Tinkersan is now active!');
     const phpExecutor = new PhpExecutor();
-    const outputChannel = vscode.window.createOutputChannel('Tinkersan');
+    
+    // Initialize the results provider
+    const resultsProvider = TinkerResultsProvider.getInstance();
+    resultsProvider.registerWebviewProvider(context);
     
     // Add status bar indicator with current framework
     const frameworkIndicator = vscode.window.createStatusBarItem(
@@ -56,23 +60,21 @@ export function activate(context: vscode.ExtensionContext) {
             return;
         }
 
-        outputChannel.clear();
-        outputChannel.show(true);
-        outputChannel.appendLine('Running code...\n');
+        // Show the results panel and indicate processing
+        resultsProvider.showResult('Running code...');
 
         try {
             const code = editor.document.getText();
             const result = await phpExecutor.execute(code);
-            outputChannel.appendLine(result);
+            resultsProvider.showResult(result);
         } catch (error: any) {
-            outputChannel.appendLine(`Error: ${error.message}`);
+            resultsProvider.showError(`Error: ${error.message}`);
         }
     });
 
     context.subscriptions.push(
         newFileCommand,
-        runCommand,
-        outputChannel
+        runCommand
     );
 }
 

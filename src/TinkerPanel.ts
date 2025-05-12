@@ -2,22 +2,23 @@ import * as vscode from 'vscode';
 import { PhpExecutor } from './PhpExecutor';
 import * as path from 'path';
 import * as fs from 'fs';
+import { TinkerResultsProvider } from './TinkerResultsProvider';
 
 export class TinkerPanel {
     public static currentPanel: TinkerPanel | undefined;
     private editor: vscode.TextEditor | undefined;
-    private outputChannel: vscode.OutputChannel;
     private phpExecutor: PhpExecutor;
+    private resultsProvider: TinkerResultsProvider;
     private disposables: vscode.Disposable[] = [];
 
     private constructor() {
         this.phpExecutor = new PhpExecutor();
-        this.outputChannel = vscode.window.createOutputChannel('Tinkersan');
+        this.resultsProvider = TinkerResultsProvider.getInstance();
     }
 
     public static async createOrShow() {
         if (TinkerPanel.currentPanel) {
-            TinkerPanel.currentPanel.outputChannel.show();
+            TinkerPanel.currentPanel.resultsProvider.show();
             return;
         }
 
@@ -41,7 +42,6 @@ export class TinkerPanel {
         // Create starter PHP file with framework comment
         fs.writeFileSync(filePath, `<?php
 /**
- * Tinkersan PHP File
  * Framework: ${framework}
  * Created: ${new Date().toISOString()}
  */
@@ -56,8 +56,8 @@ export class TinkerPanel {
             preview: false
         });
 
-        // Show output channel
-        panel.outputChannel.show(true);
+        // Show results panel
+        panel.resultsProvider.show();
 
         // Add status bar item
         const runButton = vscode.window.createStatusBarItem(
@@ -86,20 +86,19 @@ export class TinkerPanel {
         }
 
         const code = this.editor.document.getText();
-        this.outputChannel.clear();
-        this.outputChannel.appendLine('Running code...\n');
+        this.resultsProvider.clear();
+        this.resultsProvider.showResult('Running code...');
 
         try {
             const result = await this.phpExecutor.execute(code);
-            this.outputChannel.appendLine(result);
+            this.resultsProvider.showResult(result);
         } catch (error: any) {
-            this.outputChannel.appendLine(`Error: ${error.message}`);
+            this.resultsProvider.showError(`Error: ${error.message}`);
         }
     }
 
     public dispose() {
         TinkerPanel.currentPanel = undefined;
-        this.outputChannel.dispose();
         this.disposables.forEach(d => d.dispose());
     }
 } 
