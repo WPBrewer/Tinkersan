@@ -1,12 +1,12 @@
 {
   "name": "tinkersan",
   "displayName": "Tinkersan",
-  "description": "PHP Tinker for VS Code - Test and debug WordPress, Laravel, and any PHP application",
+  "description": "PHP Tinker for VS Code - Test and debug WordPress",
   "version": "0.0.1",
   "publisher": "WPBrewer",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/tinkersan.git"
+    "url": "https://github.com/wpbrewer/tinkersan.git"
   },
   "license": "MIT",
   "keywords": [
