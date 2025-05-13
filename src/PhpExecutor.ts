@@ -98,8 +98,8 @@ export class PhpExecutor {
             // Determine PsySH binary path (use bundled phar to avoid class conflicts)
             const pharPath   = path.join(__dirname, '..', 'bin', 'psysh.phar');
             const psyshCmd   = fs.existsSync(pharPath)
-                ? `php \"${pharPath}\" --no-interaction`
-                : 'psysh --no-interaction';
+                ? `php \"${pharPath}\" --no-interaction --raw-output`
+                : 'psysh --no-interaction --raw-output';
 
             // Run PsySH in non-interactive mode by piping the script into STDIN.
             const output = child_process.execSync(psyshCmd, {

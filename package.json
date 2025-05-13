@@ -29,24 +29,6 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
-    "viewsContainers": {
-      "panel": [
-        {
-          "id": "tinkersan-explorer",
-          "title": "Tinkersan",
-          "icon": "$(beaker)"
-        }
-      ]
-    },
-    "views": {
-      "tinkersan-explorer": [
-        {
-          "id": "tinkersan.results",
-          "name": "Results",
-          "type": "webview"
-        }
-      ]
-    },
     "commands": [
       {
         "command": "tinkersan.newFile",
@@ -57,12 +39,6 @@
         "command": "tinkersan.run",
         "title": "Tinkersan: Run PHP Code",
         "category": "Tinkersan"
-      },
-      {
-        "command": "tinkersan.clearResults",
-        "title": "Tinkersan: Clear Results",
-        "category": "Tinkersan",
-        "icon": "$(clear-all)"
       }
     ],
     "keybindings": [
