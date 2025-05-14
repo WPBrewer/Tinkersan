@@ -86,8 +86,39 @@ export class PhpExecutor {
                 `ini_set('display_errors', '1');\n\n` +
                 // Start buffering to capture echoes from bootstrap & user code
                 `ob_start();\n\n` +
+                `$__bootstrap_error = null;\n` +
+                `try {\n` +
                 `${bootstrapCode}\n\n` +
-                `$__tinker_result = (function() {\n${cleanUserCode}\n})();\n` +
+                `} catch (\\Throwable $e) {\n` +
+                `    $__bootstrap_error = "Bootstrap Error: " . $e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine();\n` +
+                `}\n\n` +
+                `$__tinker_result = null;\n` +
+                `$__use_error = null;\n` +
+                `\n` +
+                `if ($__bootstrap_error === null) {\n` +
+                `    try {\n` +
+                `        // First try to load any classes from use statements\n` +
+                `        $__use_statements = '${cleanUserCode.match(/^use\\s+([^;]+);/gm) ? cleanUserCode.match(/^use\\s+([^;]+);/gm)!.join("\\n") : ""}';\n` +
+                `        if (!empty($__use_statements)) {\n` +
+                `            eval($__use_statements);\n` +
+                `        }\n` +
+                `    } catch (\\Throwable $e) {\n` +
+                `        $__use_error = "Class Loading Error: " . $e->getMessage();\n` +
+                `    }\n` +
+                `\n` +
+                `    if ($__use_error === null) {\n` +
+                `        try {\n` +
+                `            $__tinker_result = (function() {\n${cleanUserCode}\n})();\n` +
+                `        } catch (\\Throwable $e) {\n` +
+                `            echo "Exception: " . $e->getMessage() . "\\n";\n` +
+                `            $__tinker_result = null;\n` +
+                `        }\n` +
+                `    } else {\n` +
+                `        echo $__use_error . "\\n";\n` +
+                `    }\n` +
+                `} else {\n` +
+                `    echo $__bootstrap_error . "\\n";\n` +
+                `}\n` +
                 `$__output = ob_get_clean();\n` +
                 `if ($__output) { echo $__output; } elseif ($__tinker_result !== null) {\n` +
                 `    if (is_bool($__tinker_result)) { echo $__tinker_result ? 'true' : 'false'; }\n` +
