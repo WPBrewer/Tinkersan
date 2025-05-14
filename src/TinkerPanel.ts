@@ -91,6 +91,7 @@ export class TinkerPanel {
 
         try {
             const result = await this.phpExecutor.execute(code);
+            this.outputChannel.clear();
             this.outputChannel.appendLine(result);
         } catch (error: any) {
             this.outputChannel.appendLine(`Error: ${error.message}`);

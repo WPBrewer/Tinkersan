@@ -63,6 +63,7 @@ export function activate(context: vscode.ExtensionContext) {
         try {
             const code = editor.document.getText();
             const result = await phpExecutor.execute(code);
+            outputChannel.clear();
             outputChannel.appendLine(result);
         } catch (error: any) {
             outputChannel.appendLine(`Error: ${error.message}`);
