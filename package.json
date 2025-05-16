@@ -2,7 +2,7 @@
   "name": "tinkersan",
   "displayName": "Tinkersan",
   "description": "PHP Tinker for VS Code - Test and debug WordPress made easy!",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "WPBrewer",
   "repository": {
     "type": "git",
