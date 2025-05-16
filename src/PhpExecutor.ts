@@ -79,7 +79,8 @@ export class PhpExecutor {
             const bootstrapper     = this._getFrameworkBootstrapper();
             const bootstrapCode    = bootstrapper.getBootstrapCode(projectPath);
 
-            const cleanUserCode = code.replace(/^<\?php\s*/, '').trim();
+            const cleanUserCode = code.replace(/^<\?php\s*/, '').trim()
+                .replace(/\becho\s+([^;]+);/g, '_tinkersan_echo($1);');
 
             const script =
                 `error_reporting(E_ALL);\n` +
@@ -87,6 +88,14 @@ export class PhpExecutor {
                 // Start buffering to capture echoes from bootstrap & user code
                 `ob_start();\n` +
                 `echo '';\n` +
+                // Define helper function to better display boolean values
+                `function _tinkersan_echo($value) {\n` +
+                `    if (is_bool($value)) {\n` +
+                `        echo $value ? 'true' : 'false';\n` +
+                `        return;\n` +
+                `    }\n` +
+                `    echo $value;\n` +
+                `}\n\n` +
                 `$__bootstrap_error = null;\n` +
                 `try {\n` +
                 `${bootstrapCode}\n\n` +
@@ -130,10 +139,20 @@ export class PhpExecutor {
                 cwd:          projectPath,
                 input:        script,
                 encoding:     'utf8',
-                maxBuffer:    1024 * 1024 * 10 // 10 MB
+                maxBuffer:    1024 * 1024 * 10 // 10 MB
             });
 
-            return output.trim() || `Code executed successfully with framework: ${bootstrapper.getName()} (no output)`;
+            // Handle empty outputs that might be from boolean false return values
+            const trimmedOutput = output.trim();
+            if (trimmedOutput === '') {
+                // Check if it's a simple echo of a boolean false value
+                const lastStatementMatch = cleanUserCode.match(/^\s*echo\s+(.+?);?\s*$/m);
+                if (lastStatementMatch) {
+                    return "(Output: empty - possibly echoed a boolean false)";
+                }
+            }
+
+            return trimmedOutput || `Code executed successfully with framework: ${bootstrapper.getName()} (no output)`;
         } catch ( error: any ) {
             // PsySH prints errors to stdout. Capture both stderr/stdout.
             if ( error.stdout ) {
