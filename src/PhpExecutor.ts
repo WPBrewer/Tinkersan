@@ -98,33 +98,20 @@ export class PhpExecutor {
                 `\n` +
                 `if ($__bootstrap_error === null) {\n` +
                 `    try {\n` +
-                `        // First try to load any classes from use statements\n` +
-                `        $__use_statements = '${cleanUserCode.match(/^use\\s+([^;]+);/gm) ? cleanUserCode.match(/^use\\s+([^;]+);/gm)!.join("\\n") : ""}';\n` +
-                `        if (!empty($__use_statements)) {\n` +
-                `            eval($__use_statements);\n` +
-                `        }\n` +
+                `        // Execute code directly instead of separating use statements\n` +
+                `        $__tinker_result = (function() {\n` +
+                `            // Execute in isolation but with echoes preserved\n` +
+                `            ${cleanUserCode}\n` +
+                `            return null; // Prevent last expression from being returned\n` +
+                `        })();\n` +
                 `    } catch (\\Throwable $e) {\n` +
-                `        $__use_error = "Class Loading Error: " . $e->getMessage();\n` +
-                `    }\n` +
-                `\n` +
-                `    if ($__use_error === null) {\n` +
-                `        try {\n` +
-                `            $__tinker_result = (function() {\n${cleanUserCode}\n})();\n` +
-                `        } catch (\\Throwable $e) {\n` +
-                `            echo "Exception: " . $e->getMessage() . "\\n";\n` +
-                `            $__tinker_result = null;\n` +
-                `        }\n` +
-                `    } else {\n` +
-                `        echo $__use_error . "\\n";\n` +
+                `        echo "Exception: " . $e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine() . "\\n";\n` +
+                `        $__tinker_result = null;\n` +
                 `    }\n` +
                 `} else {\n` +
                 `    echo $__bootstrap_error . "\\n";\n` +
                 `}\n` +
-                `if ($__tinker_result !== null) {\n` +
-                `    if (is_bool($__tinker_result)) { echo $__tinker_result ? 'true' : 'false'; }\n` +
-                `    elseif (is_scalar($__tinker_result) || $__tinker_result === null) { echo $__tinker_result; }\n` +
-                `    else { echo print_r($__tinker_result, true); }\n` +
-                `}\n` +
+                // We no longer need to handle $__tinker_result here since we're tracking outputs directly
                 // Flush any buffered output and then start a fresh buffer to prevent PsySH notice
                 `$__output = ob_get_clean();\n` +
                 `echo $__output;\n` +
