@@ -85,7 +85,8 @@ export class PhpExecutor {
                 `error_reporting(E_ALL);\n` +
                 `ini_set('display_errors', '1');\n\n` +
                 // Start buffering to capture echoes from bootstrap & user code
-                `ob_start();\n\n` +
+                `ob_start();\n` +
+                `echo '';\n` +
                 `$__bootstrap_error = null;\n` +
                 `try {\n` +
                 `${bootstrapCode}\n\n` +
@@ -119,18 +120,23 @@ export class PhpExecutor {
                 `} else {\n` +
                 `    echo $__bootstrap_error . "\\n";\n` +
                 `}\n` +
-                `$__output = ob_get_clean();\n` +
-                `if ($__output) { echo $__output; } elseif ($__tinker_result !== null) {\n` +
+                `if ($__tinker_result !== null) {\n` +
                 `    if (is_bool($__tinker_result)) { echo $__tinker_result ? 'true' : 'false'; }\n` +
                 `    elseif (is_scalar($__tinker_result) || $__tinker_result === null) { echo $__tinker_result; }\n` +
                 `    else { echo print_r($__tinker_result, true); }\n` +
-                `}`;
+                `}\n` +
+                // Flush any buffered output and then start a fresh buffer to prevent PsySH notice
+                `$__output = ob_get_clean();\n` +
+                `echo $__output;\n` +
+                `ob_start();\n` +
+                `echo '';\n` +
+                ``;
 
             // Determine PsySH binary path (use bundled phar to avoid class conflicts)
             const pharPath   = path.join(__dirname, '..', 'bin', 'psysh.phar');
             const psyshCmd   = fs.existsSync(pharPath)
-                ? `php \"${pharPath}\" --no-interaction --raw-output`
-                : 'psysh --no-interaction --raw-output';
+                ? `php \"${pharPath}\" --no-interaction --raw-output -v`
+                : 'psysh --no-interaction --raw-output -v';
 
             // Run PsySH in non-interactive mode by piping the script into STDIN.
             const output = child_process.execSync(psyshCmd, {
