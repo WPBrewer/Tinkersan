@@ -1,15 +1,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { FrameworkBootstrapper } from './FrameworkBootstrapper';
+import { WordPressDetector } from '../utils/WordPressDetector';
 
 export class WordPressBootstrapper implements FrameworkBootstrapper {
     public detect(basePath: string): boolean {
-        // Check for wp-config.php or wp-load.php
-        return (
-            fs.existsSync(path.join(basePath, 'wp-config.php')) ||
-            fs.existsSync(path.join(basePath, 'wp-load.php')) ||
-            fs.existsSync(path.join(basePath, 'wp-content')) // Check for wp-content directory
-        );
+        // Use the more robust WordPressDetector
+        return WordPressDetector.isWordPressRoot(basePath);
     }
     
     public getBootstrapCode(basePath: string): string {

@@ -3,22 +3,65 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as child_process from 'child_process';
 import { FrameworkBootstrapperFactory, FrameworkBootstrapper, GenericPhpBootstrapper } from './frameworks';
+import { WordPressDetector } from './utils/WordPressDetector';
 
 export class PhpExecutor {
     private _getProjectPath(): string {
         const config = vscode.workspace.getConfiguration('tinkersan');
         const projectPath = config.get<string>('projectPath');
+        const verboseLogging = config.get<boolean>('verboseLogging', false);
         
-        if (!projectPath) {
-            // Try to use the workspace folder as the default project path
-            const workspaceFolders = vscode.workspace.workspaceFolders;
-            if (workspaceFolders && workspaceFolders.length > 0) {
-                return workspaceFolders[0].uri.fsPath;
-            }
-            throw new Error('Project path not configured! Please set tinkersan.projectPath in settings.');
+        if (verboseLogging) {
+            WordPressDetector.showDebugOutput();
+            console.log('Tinkersan: Getting project path...');
         }
         
-        return projectPath;
+        if (projectPath) {
+            // User has explicitly set a path
+            if (verboseLogging) {
+                console.log(`Tinkersan: Using configured project path: ${projectPath}`);
+            }
+            return projectPath;
+        }
+        
+        // Try auto-detection
+        const detectedPath = WordPressDetector.autoDetectWordPressRoot();
+        if (detectedPath) {
+            if (verboseLogging) {
+                console.log(`Tinkersan: Auto-detected WordPress root: ${detectedPath}`);
+            }
+            
+            // Show info message about auto-detected path
+            vscode.window.showInformationMessage(
+                `Auto-detected WordPress at: ${detectedPath}`,
+                'Use This Path',
+                'Configure Different Path',
+                'Show Debug Log'
+            ).then(selection => {
+                if (selection === 'Use This Path') {
+                    // Save the detected path to settings
+                    config.update('projectPath', detectedPath, vscode.ConfigurationTarget.Workspace);
+                } else if (selection === 'Configure Different Path') {
+                    vscode.commands.executeCommand('workbench.action.openSettings', 'tinkersan.projectPath');
+                } else if (selection === 'Show Debug Log') {
+                    WordPressDetector.showDebugOutput();
+                }
+            });
+            
+            return detectedPath;
+        }
+        
+        // Fallback to workspace folder
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (workspaceFolders && workspaceFolders.length > 0) {
+            const fallbackPath = workspaceFolders[0].uri.fsPath;
+            if (verboseLogging) {
+                console.log(`Tinkersan: Using fallback workspace path: ${fallbackPath}`);
+            }
+            return fallbackPath;
+        }
+        
+        throw new Error('WordPress installation not found! Please set tinkersan.projectPath in settings or create a .tinkersan config file.');
     }
 
     private _getFrameworkName(): string {

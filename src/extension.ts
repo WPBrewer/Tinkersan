@@ -4,6 +4,8 @@ import { PhpExecutor } from './PhpExecutor';
 // Import frameworks to register them
 import './frameworks';
 import { loadCustomBootstrappers } from './frameworks';
+import { WordPressDetector } from './utils/WordPressDetector';
+import * as path from 'path';
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('Tinkersan is now active!');
@@ -70,9 +72,61 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
+    // Register Create Config command
+    let createConfigCommand = vscode.commands.registerCommand('tinkersan.createConfig', async () => {
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders) {
+            vscode.window.showErrorMessage('No workspace folder open');
+            return;
+        }
+
+        // Create config in .tinkersan folder
+        const tinkersanDir = path.join(workspaceFolders[0].uri.fsPath, '.tinkersan');
+        const configPath = path.join(tinkersanDir, '.tinkersan.json');
+        
+        // Check if config already exists
+        if (require('fs').existsSync(configPath)) {
+            const overwrite = await vscode.window.showWarningMessage(
+                'Config file already exists. Overwrite?',
+                'Yes',
+                'No'
+            );
+            if (overwrite !== 'Yes') {
+                return;
+            }
+        }
+
+        try {
+            WordPressDetector.createSampleConfig(configPath);
+            
+            // Open the config file
+            const doc = await vscode.workspace.openTextDocument(configPath);
+            await vscode.window.showTextDocument(doc);
+            
+            vscode.window.showInformationMessage('Created .tinkersan/.tinkersan.json config file');
+        } catch (error: any) {
+            vscode.window.showErrorMessage(`Failed to create config: ${error.message}`);
+        }
+    });
+
+    // Register Show Debug Log command
+    let showDebugLogCommand = vscode.commands.registerCommand('tinkersan.showDebugLog', () => {
+        WordPressDetector.showDebugOutput();
+        
+        // Also trigger a detection to populate the log
+        const detectedPath = WordPressDetector.autoDetectWordPressRoot();
+        if (detectedPath) {
+            vscode.window.showInformationMessage(`Current WordPress root: ${detectedPath}`);
+        } else {
+            vscode.window.showWarningMessage('No WordPress installation detected');
+        }
+    });
+
     context.subscriptions.push(
         newFileCommand,
         runCommand,
+        createConfigCommand,
+        showDebugLogCommand,
         outputChannel
     );
 }

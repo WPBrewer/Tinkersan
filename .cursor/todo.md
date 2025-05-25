@@ -12,3 +12,9 @@ WP Console: https://wordpress.org/plugins/wp-console/
 - [x] Auto-detection of framework from project structure
 - [x] Direct PHP execution without PsySH dependency
 - [x] Automatic expression evaluation with smart output formatting
+- [x] Auto-detection of WordPress root directory
+- [x] Config file support (.tinkersan.json) for custom paths
+- [x] Command to create config file template
+- [x] Plugin folder support - auto-detect WordPress root from plugin directories
+- [x] Verbose logging and debug output for configuration and detection process
+- [x] Context-aware config file priority system for multiple configs
