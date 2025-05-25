@@ -52,8 +52,8 @@ export class PhpExecutor {
         }
         
         // Fallback to workspace folder
-        const workspaceFolders = vscode.workspace.workspaceFolders;
-        if (workspaceFolders && workspaceFolders.length > 0) {
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (workspaceFolders && workspaceFolders.length > 0) {
             const fallbackPath = workspaceFolders[0].uri.fsPath;
             if (verboseLogging) {
                 console.log(`Tinkersan: Using fallback workspace path: ${fallbackPath}`);
@@ -123,7 +123,18 @@ export class PhpExecutor {
             const bootstrapCode = bootstrapper.getBootstrapCode(projectPath);
 
             // Remove PHP opening tag if present
-            const cleanUserCode = code.replace(/^<\?php\s*/i, '').trim();
+            const cleanUserCodeRaw = code.replace(/^<\?php\s*/i, '').trim();
+
+            // Extract use statements and convert to class_alias registrations
+            const useRegex = /^\s*use\s+([^;]+);/gm;
+            let aliasSetupCode = '';
+            let cleanUserCode = cleanUserCodeRaw.replace(useRegex, (match, p1) => {
+                const parts = p1.trim().split(/\s+as\s+/i);
+                const fullClass = parts[0].trim();
+                const alias = parts[1] ? parts[1].trim() : fullClass.split('\\').pop();
+                aliasSetupCode += `if ( ! class_exists('${alias}') && class_exists('${fullClass}') ) { class_alias('${fullClass}', '${alias}'); }\n`;
+                return '';
+            }).trim();
 
             const script = `<?php
 error_reporting(E_ALL);
@@ -132,123 +143,28 @@ ini_set('display_errors', '1');
 // Pretty print function for Tinkersan
 function _tinkersan_dump($value, $return = false) {
     $output = '';
-    
-    if (is_null($value)) {
-        $output = "null";
-    } elseif (is_bool($value)) {
-        $output = $value ? "true" : "false";
-    } elseif (is_scalar($value)) {
-        $output = var_export($value, true);
-    } elseif (is_object($value)) {
-        // Use var_dump for all objects to show full details
-        ob_start();
-        var_dump($value);
-        $output = ob_get_clean();
-    } elseif (is_array($value)) {
-        ob_start();
-        print_r($value);
-        $output = ob_get_clean();
-    } else {
-        ob_start();
-        var_dump($value);
-        $output = ob_get_clean();
-    }
-    
-    if ($return) {
-        return $output;
-    }
+    if (is_null($value)) { $output = "null"; }
+    elseif (is_bool($value)) { $output = $value ? "true" : "false"; }
+    elseif (is_scalar($value)) { $output = var_export($value, true); }
+    elseif (is_object($value)) { ob_start(); var_dump($value); $output = ob_get_clean(); }
+    elseif (is_array($value)) { ob_start(); print_r($value); $output = ob_get_clean(); }
+    else { ob_start(); var_dump($value); $output = ob_get_clean(); }
+    if ($return) { return $output; }
     echo $output;
 }
 
 // Bootstrap framework
 try {
-    ${bootstrapCode}
-} catch (\\Throwable $e) {
-    echo "Bootstrap Error: " . $e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine() . "\\n";
-    exit(1);
-}
+${bootstrapCode}
+} catch (\Throwable $e) { echo "Bootstrap Error: " . $e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine() . "\n"; exit(1);} 
 
-// Parse and execute user code with expression evaluation
-$__tinkersan_code = <<<'TINKERSAN_CODE'
+// Setup class aliases from use statements
+${aliasSetupCode}
+
+// Execute user code
+try {
 ${cleanUserCode}
-TINKERSAN_CODE;
-
-// Simple statement parser - split by semicolons but respect braces
-$__tinkersan_statements = [];
-$__tinkersan_current = '';
-$__tinkersan_brace_depth = 0;
-$__tinkersan_in_string = false;
-$__tinkersan_string_char = '';
-
-for ($i = 0; $i < strlen($__tinkersan_code); $i++) {
-    $char = $__tinkersan_code[$i];
-    $prev_char = $i > 0 ? $__tinkersan_code[$i - 1] : '';
-    
-    // Handle string detection
-    if (!$__tinkersan_in_string && ($char === '"' || $char === "'") && $prev_char !== '\\\\') {
-        $__tinkersan_in_string = true;
-        $__tinkersan_string_char = $char;
-    } elseif ($__tinkersan_in_string && $char === $__tinkersan_string_char && $prev_char !== '\\\\') {
-        $__tinkersan_in_string = false;
-    }
-    
-    $__tinkersan_current .= $char;
-    
-    if (!$__tinkersan_in_string) {
-        if ($char === '{') $__tinkersan_brace_depth++;
-        elseif ($char === '}') $__tinkersan_brace_depth--;
-        elseif ($char === ';' && $__tinkersan_brace_depth === 0) {
-            $__tinkersan_statements[] = trim($__tinkersan_current);
-            $__tinkersan_current = '';
-        }
-    }
-}
-
-// Don't forget the last statement (might not have semicolon)
-if ($__tinkersan_current = trim($__tinkersan_current)) {
-    $__tinkersan_statements[] = $__tinkersan_current;
-}
-
-// Execute statements
-$__tinkersan_last_value = null;
-$__tinkersan_has_output = false;
-
-foreach ($__tinkersan_statements as $__tinkersan_index => $__tinkersan_statement) {
-    if (empty($__tinkersan_statement)) continue;
-    
-    $__tinkersan_is_last = ($__tinkersan_index === count($__tinkersan_statements) - 1);
-    
-    // Check if statement already outputs something
-    $__tinkersan_outputs = preg_match('/^\\s*(echo|print|printf|var_dump|print_r|dump|dd)\\s/i', $__tinkersan_statement);
-    
-    if ($__tinkersan_outputs) {
-        $__tinkersan_has_output = true;
-    }
-    
-    try {
-        if ($__tinkersan_is_last && !$__tinkersan_outputs && !preg_match('/^\\s*(return|die|exit)\\s/i', $__tinkersan_statement)) {
-            // Try to evaluate as expression and capture result
-            $__tinkersan_last_value = eval('return ' . $__tinkersan_statement . ';');
-        } else {
-            // Execute as statement
-            eval($__tinkersan_statement . (substr($__tinkersan_statement, -1) !== ';' ? ';' : ''));
-        }
-    } catch (\\ParseError $e) {
-        // If return fails, try executing as statement
-        if ($__tinkersan_is_last && !$__tinkersan_outputs) {
-            eval($__tinkersan_statement . (substr($__tinkersan_statement, -1) !== ';' ? ';' : ''));
-        } else {
-            throw $e;
-        }
-    }
-}
-
-// Auto-display last value if no explicit output
-if ($__tinkersan_last_value !== null && !$__tinkersan_has_output) {
-    echo "\\n=> ";
-    _tinkersan_dump($__tinkersan_last_value);
-    echo "\\n";
-}
+} catch (\Throwable $e) { echo $e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine(); }
 `;
 
             // Execute PHP directly

@@ -18,3 +18,5 @@ WP Console: https://wordpress.org/plugins/wp-console/
 - [x] Plugin folder support - auto-detect WordPress root from plugin directories
 - [x] Verbose logging and debug output for configuration and detection process
 - [x] Context-aware config file priority system for multiple configs
+- [x] WordPress native plugin loading - relies on WordPress's built-in plugin system
+- [x] Debug helper function for troubleshooting class loading issues
