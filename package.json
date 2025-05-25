@@ -90,9 +90,6 @@
     "mocha": "^10.2.0",
     "typescript": "^5.1.3"
   },
-  "requirements": {
-    "psysh": "^0.11.0"
-  },
   "dependencies": {
   }
 } 

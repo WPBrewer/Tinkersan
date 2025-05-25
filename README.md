@@ -3,8 +3,10 @@
 A PHP Tinker Tool for VS Code. Debug and test PHP code in WordPress directly in VS Code.
 
 ## Features
-- Execute PHP code in framework context (Currentlyt support WordPress)
+- Execute PHP code in framework context (Currently support WordPress)
 - Auto-detect framework from project structure
+- Automatic expression evaluation - see results without explicit echo/print
+- Full object inspection using var_dump for detailed property viewing
 
 ## Supported Frameworks
 - **WordPress**: Complete integration with WordPress core and WooCommerce
@@ -24,3 +26,11 @@ A PHP Tinker Tool for VS Code. Debug and test PHP code in WordPress directly in 
 3. Create new tinker file: `Ctrl+Shift+P` -> `Tinkersan: New PHP File`
 4. Write PHP code with framework support
 5. Run code: `Ctrl+Enter` or `Cmd+Enter` on Mac
+
+## Expression Evaluation
+The last expression in your code is automatically evaluated and displayed:
+```php
+$user = get_user(1);
+$user->display_name
+// Output: => "John Doe"
+```
