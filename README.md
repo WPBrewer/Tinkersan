@@ -9,6 +9,7 @@ A PHP Tinker Tool for VS Code. Debug and test PHP code in WordPress directly in 
 - Full object inspection using var_dump for detailed property viewing
 - Auto-detection of WordPress installation
 - Config file support for custom paths
+- **Multiple WordPress installations support** - Context-aware detection and bootstrapping
 
 ## Supported Frameworks
 - **WordPress**: Complete integration with WordPress core and WooCommerce
@@ -104,65 +105,36 @@ When editing files in `my-plugin`, it will use the plugin's config. When editing
 4. Write PHP code with framework support
 5. Run code: `Ctrl+Enter` or `Cmd+Enter` on Mac
 
-## Expression Evaluation
-The last expression in your code is automatically evaluated and displayed:
-```php
-$user = get_user(1);
-$user->display_name
-// Output: => "John Doe"
+
+### Multiple WordPress Installations
+
+Tinkersan supports workspaces with multiple WordPress installations. The extension intelligently detects and bootstraps the correct WordPress instance based on the current file context.
+
+**Example workspace structure:**
+```
+workspace/
+├── site1/
+│   ├── wp-config.php
+│   ├── wp-content/plugins/my-plugin/
+│   │   └── .tinkersan/
+│   │       └── .tinkersan.json  # Config for site1
+│   └── .tinkersan/
+│       └── test-site1.php
+├── site2/
+│   ├── wp-config.php
+│   ├── wp-content/
+│   └── .tinkersan/
+│       ├── .tinkersan.json      # Config for site2
+│       └── test-site2.php
+└── .tinkersan/
+    └── .tinkersan.json          # Global config (fallback)
 ```
 
-## Class Loading and Namespaces
-Tinkersan automatically handles WordPress plugin class loading:
-
-### How WordPress Plugin Loading Works
-When WordPress is bootstrapped through `wp-load.php`, it automatically:
-1. Loads all active plugins from `wp-content/plugins/`
-2. Executes each plugin's main file
-3. Triggers the `plugins_loaded` action
-4. Initializes plugin autoloaders (including Composer)
-
-**This means:** If a plugin is active in WordPress, its classes should be automatically available without any manual loading.
-
-### Why Classes Might Not Be Found
-If you're getting "Class not found" errors:
-
-1. **Plugin Not Active**: Check if the plugin is activated in WordPress
-2. **Namespace Issues**: Ensure you're using the correct namespace
-3. **Autoloader Not Configured**: The plugin might not have proper autoloading set up
-
-### Debugging Class Loading
-Use the debug helper to investigate class loading issues:
-```php
-// Debug why a class isn't loading
-tinkersan_debug_class('WPBrewer\\IPCheck\\IPCheckService');
-```
-
-This will show:
-- Whether the class exists
-- Active plugins that might contain the class
-- Available classes in the namespace
-- Composer autoloader status
-
-### Example Usage
-```php
-// If the plugin is active, just use the class directly
-use WPBrewer\IPCheck\IPCheckService;
-$service = IPCheckService::get_instance();
-
-// Or without use statement
-$service = new WPBrewer\IPCheck\IPCheckService();
-```
-
-### Manual Loading (Rarely Needed)
-In rare cases where a plugin's autoloader isn't working:
-```php
-// Check if plugin has a Composer autoloader
-$autoload = WP_PLUGIN_DIR . '/plugin-name/vendor/autoload.php';
-if (file_exists($autoload)) {
-    require_once $autoload;
-}
-```
+**How it works:**
+- When editing files in `site1/`, Tinkersan automatically uses the WordPress installation in `site1/`
+- When editing files in `site2/`, it uses the WordPress installation in `site2/`
+- Each installation can have its own configuration and plugins
+- No manual switching required - it's completely context-aware
 
 ### Plugin Development
 You can use Tinkersan directly in your plugin development:
@@ -184,52 +156,3 @@ You can use Tinkersan directly in your plugin development:
        "framework": "WordPress"
    }
    ```
-
-3. Test your plugin functions directly:
-   ```php
-   // .tinkersan/test-functions.php
-   $product = wc_get_product(123);
-   $product->get_name()
-   ```
-
-### Enhanced Dependency Loading
-When a class uses other classes (dependencies), Tinkersan automatically handles this:
-
-**Automatic Dependency Loading:**
-- **Plugin-wide loading**: When a namespaced class is requested, all files from that plugin are loaded
-- **Recursive loading**: Searches through `src/`, `includes/`, `lib/`, and `classes/` directories
-- **Wildcard plugin detection**: Finds plugins with patterns like `wpbr-namespace-*`
-- **Main plugin file loading**: Includes the main plugin file to trigger initialization
-
-**Manual Dependency Loading:**
-If automatic loading doesn't work, use these helper functions:
-
-```php
-// Load a specific class and its dependencies
-tinkersan_load_class('WPBrewer\\IPCheck\\IPCheckService');
-
-// Preload all files from a plugin namespace
-tinkersan_preload_plugin('wpbrewer'); // Loads all WPBrewer plugin files
-
-// Check if class exists after loading
-if (class_exists('WPBrewer\\IPCheck\\IPCheckService')) {
-    $service = new WPBrewer\IPCheck\IPCheckService();
-}
-```
-
-**Dependency Error Handling:**
-When a class dependency is missing, Tinkersan provides:
-- Detailed error messages with suggestions
-- Automatic loading attempts
-- Similar class name suggestions
-- Manual loading instructions
-
-**Example with Dependencies:**
-```php
-// This will automatically load all dependencies
-use WPBrewer\IPCheck\IPCheckService;
-
-// If the above fails, manually preload the plugin
-tinkersan_preload_plugin('wpbrewer');
-$service = IPCheckService::get_instance();
-```

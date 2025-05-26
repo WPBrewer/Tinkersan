@@ -20,3 +20,61 @@ WP Console: https://wordpress.org/plugins/wp-console/
 - [x] Context-aware config file priority system for multiple configs
 - [x] WordPress native plugin loading - relies on WordPress's built-in plugin system
 - [x] Debug helper function for troubleshooting class loading issues
+- [x] **Multiple WordPress installations support** - Context-aware detection and bootstrapping
+
+# Multiple WordPress Installations Support
+
+Tinkersan now supports workspaces with multiple WordPress installations. The extension intelligently detects and bootstraps the correct WordPress instance based on:
+
+## Detection Priority (Context-Aware)
+
+1. **Config file closest to current active file** - Finds `.tinkersan.json` by traversing up from the current file
+2. **WordPress root by traversing up from current file** - Searches for WordPress signatures in parent directories
+3. **All WordPress installations analysis** - Finds all WordPress roots and selects the closest one to the current file
+4. **Fallback to first found installation** - Uses the first WordPress installation found in the workspace
+
+## How It Works
+
+- **Context-aware execution**: Each time you run code, Tinkersan detects the WordPress installation closest to your current file
+- **Multiple config support**: You can have different `.tinkersan.json` configs for different WordPress installations
+- **Plugin-specific configs**: Configs in plugin directories take priority when editing plugin files
+- **Automatic detection**: No manual configuration needed - works out of the box with multiple WordPress sites
+
+## Example Workspace Structure
+
+```
+workspace/
+├── site1/
+│   ├── wp-config.php
+│   ├── wp-content/plugins/my-plugin/
+│   │   └── .tinkersan/
+│   │       └── .tinkersan.json  # Config for site1
+│   └── .tinkersan/
+│       └── test-site1.php
+├── site2/
+│   ├── wp-config.php
+│   ├── wp-content/
+│   └── .tinkersan/
+│       ├── .tinkersan.json      # Config for site2
+│       └── test-site2.php
+└── .tinkersan/
+    └── .tinkersan.json          # Global config (fallback)
+```
+
+When editing files in `site1/`, Tinkersan will automatically use the WordPress installation in `site1/`. When editing files in `site2/`, it will use the WordPress installation in `site2/`.
+
+## Configuration
+
+Each WordPress installation can have its own `.tinkersan.json` config:
+
+```json
+{
+    "wordpressRoot": ".",
+    "framework": "WordPress",
+    "settings": {
+        "verboseLogging": true
+    }
+}
+```
+
+The `wordpressRoot` path is relative to the `.tinkersan` folder containing the config file.

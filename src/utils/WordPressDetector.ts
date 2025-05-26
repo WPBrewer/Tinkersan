@@ -475,4 +475,207 @@ export class WordPressDetector {
             'utf8'
         );
     }
+
+    /**
+     * Context-aware WordPress root detection for multiple WordPress installations
+     * This method prioritizes the WordPress installation closest to the current active file
+     */
+    public static autoDetectWordPressRootForCurrentContext(): string | null {
+        this.log('=== Starting Context-Aware WordPress Detection ===', true);
+        
+        const activeEditor = vscode.window.activeTextEditor;
+        let currentFilePath: string | null = null;
+        
+        if (activeEditor) {
+            currentFilePath = activeEditor.document.uri.fsPath;
+            this.log(`Current active file: ${currentFilePath}`, true);
+        }
+
+        // 1. First priority: Find config file closest to current file
+        if (currentFilePath) {
+            this.log('Step 1: Looking for config file closest to current file...');
+            const contextConfig = this.findTinkersanConfigForFile(currentFilePath);
+            if (contextConfig) {
+                this.log(`Found context-specific config: ${contextConfig}`, true);
+                const wpRoot = this.readWordPressRootFromConfig(contextConfig);
+                if (wpRoot && this.isWordPressRoot(wpRoot)) {
+                    this.log(`✅ WordPress root from context config: ${wpRoot}`, true);
+                    return wpRoot;
+                }
+            }
+        }
+
+        // 2. Second priority: Find WordPress root by traversing up from current file
+        if (currentFilePath) {
+            this.log('Step 2: Traversing up from current file...');
+            const wpRootFromFile = this.findWordPressRoot(path.dirname(currentFilePath));
+            if (wpRootFromFile) {
+                this.log(`✅ WordPress root found from current file traversal: ${wpRootFromFile}`, true);
+                return wpRootFromFile;
+            }
+        }
+
+        // 3. Third priority: Find all WordPress installations and choose the closest one
+        this.log('Step 3: Finding all WordPress installations in workspace...');
+        const allWordPressRoots = this.findAllWordPressRoots();
+        
+        if (allWordPressRoots.length === 0) {
+            this.log('❌ No WordPress installations found', true);
+            return null;
+        }
+
+        if (allWordPressRoots.length === 1) {
+            this.log(`✅ Single WordPress installation found: ${allWordPressRoots[0]}`, true);
+            return allWordPressRoots[0];
+        }
+
+        // Multiple WordPress installations found
+        this.log(`Found ${allWordPressRoots.length} WordPress installations: ${allWordPressRoots.join(', ')}`, true);
+
+        if (currentFilePath) {
+            // Find the closest WordPress root to the current file
+            let closestRoot: string | null = null;
+            let shortestDistance = Infinity;
+
+            for (const wpRoot of allWordPressRoots) {
+                if (currentFilePath.startsWith(wpRoot)) {
+                    const distance = currentFilePath.replace(wpRoot, '').split(path.sep).length;
+                    if (distance < shortestDistance) {
+                        shortestDistance = distance;
+                        closestRoot = wpRoot;
+                    }
+                }
+            }
+
+            if (closestRoot) {
+                this.log(`✅ Closest WordPress root to current file: ${closestRoot}`, true);
+                return closestRoot;
+            }
+        }
+
+        // Fallback to the first WordPress installation found
+        this.log(`Using fallback WordPress root: ${allWordPressRoots[0]}`, true);
+        return allWordPressRoots[0];
+    }
+
+    /**
+     * Find all WordPress installations in the workspace
+     */
+    public static findAllWordPressRoots(): string[] {
+        const wordpressRoots: string[] = [];
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        
+        if (!workspaceFolders) {
+            return wordpressRoots;
+        }
+
+        for (const folder of workspaceFolders) {
+            // Check workspace root
+            if (this.isWordPressRoot(folder.uri.fsPath)) {
+                wordpressRoots.push(folder.uri.fsPath);
+            }
+
+            // Check common subdirectories
+            const commonPaths = [
+                'public_html',
+                'public',
+                'www',
+                'htdocs',
+                'wordpress',
+                'wp'
+            ];
+
+            for (const subPath of commonPaths) {
+                const fullPath = path.join(folder.uri.fsPath, subPath);
+                if (fs.existsSync(fullPath) && this.isWordPressRoot(fullPath)) {
+                    wordpressRoots.push(fullPath);
+                }
+            }
+
+            // Recursively search for WordPress installations
+            this.searchWordPressRootsRecursively(folder.uri.fsPath, wordpressRoots, 3); // Max depth of 3
+        }
+
+        // Remove duplicates
+        return [...new Set(wordpressRoots)];
+    }
+
+    /**
+     * Recursively search for WordPress installations
+     */
+    private static searchWordPressRootsRecursively(dirPath: string, foundRoots: string[], maxDepth: number): void {
+        if (maxDepth <= 0) {
+            return;
+        }
+
+        try {
+            const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+            
+            for (const entry of entries) {
+                if (entry.isDirectory()) {
+                    const fullPath = path.join(dirPath, entry.name);
+                    
+                    // Skip common non-WordPress directories
+                    if (entry.name.startsWith('.') || 
+                        entry.name === 'node_modules' || 
+                        entry.name === 'vendor') {
+                        continue;
+                    }
+
+                    if (this.isWordPressRoot(fullPath)) {
+                        foundRoots.push(fullPath);
+                    } else {
+                        // Continue searching recursively
+                        this.searchWordPressRootsRecursively(fullPath, foundRoots, maxDepth - 1);
+                    }
+                }
+            }
+        } catch (error) {
+            // Ignore permission errors or other issues
+        }
+    }
+
+    /**
+     * Find .tinkersan config file closest to a specific file
+     */
+    private static findTinkersanConfigForFile(filePath: string): string | null {
+        const configNames = ['.tinkersan.json', 'tinkersan.json'];
+        let currentDir = path.dirname(filePath);
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        
+        if (!workspaceRoot) {
+            return null;
+        }
+
+        // Traverse up from the file location
+        while (currentDir.startsWith(workspaceRoot)) {
+            // Check for config in .tinkersan folder
+            const tinkersanDir = path.join(currentDir, '.tinkersan');
+            if (fs.existsSync(tinkersanDir)) {
+                for (const configName of configNames) {
+                    const configPath = path.join(tinkersanDir, configName);
+                    if (fs.existsSync(configPath)) {
+                        return configPath;
+                    }
+                }
+            }
+
+            // Check for config in current directory
+            for (const configName of configNames) {
+                const configPath = path.join(currentDir, configName);
+                if (fs.existsSync(configPath)) {
+                    return configPath;
+                }
+            }
+
+            // Move up one directory
+            const parentDir = path.dirname(currentDir);
+            if (parentDir === currentDir) {
+                break; // Reached filesystem root
+            }
+            currentDir = parentDir;
+        }
+
+        return null;
+    }
 } 

@@ -52,13 +52,66 @@ export class PhpExecutor {
         }
         
         // Fallback to workspace folder
-            const workspaceFolders = vscode.workspace.workspaceFolders;
-            if (workspaceFolders && workspaceFolders.length > 0) {
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (workspaceFolders && workspaceFolders.length > 0) {
             const fallbackPath = workspaceFolders[0].uri.fsPath;
             if (verboseLogging) {
                 console.log(`Tinkersan: Using fallback workspace path: ${fallbackPath}`);
             }
             return fallbackPath;
+        }
+        
+        throw new Error('WordPress installation not found! Please set tinkersan.projectPath in settings or create a .tinkersan config file.');
+    }
+
+    /**
+     * Get project path for current context (used for execution)
+     * This method uses context-aware detection for multiple WordPress installations
+     */
+    private _getProjectPathForCurrentContext(): string {
+        const config = vscode.workspace.getConfiguration('tinkersan');
+        const projectPath = config.get<string>('projectPath');
+        const verboseLogging = config.get<boolean>('verboseLogging', false);
+        
+        if (verboseLogging) {
+            WordPressDetector.showDebugOutput();
+            console.log('Tinkersan: Getting project path for current context...');
+        }
+        
+        if (projectPath) {
+            // User has explicitly set a path - use it
+            if (verboseLogging) {
+                console.log(`Tinkersan: Using configured project path: ${projectPath}`);
+            }
+            return projectPath;
+        }
+        
+        // Try context-aware auto-detection for multiple WordPress installations
+        const detectedPath = WordPressDetector.autoDetectWordPressRootForCurrentContext();
+        if (detectedPath) {
+            if (verboseLogging) {
+                console.log(`Tinkersan: Context-aware detected WordPress root: ${detectedPath}`);
+            }
+            return detectedPath;
+        }
+        
+        // Fallback to the original detection method
+        const fallbackPath = WordPressDetector.autoDetectWordPressRoot();
+        if (fallbackPath) {
+            if (verboseLogging) {
+                console.log(`Tinkersan: Fallback detected WordPress root: ${fallbackPath}`);
+            }
+            return fallbackPath;
+        }
+        
+        // Final fallback to workspace folder
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (workspaceFolders && workspaceFolders.length > 0) {
+            const finalFallback = workspaceFolders[0].uri.fsPath;
+            if (verboseLogging) {
+                console.log(`Tinkersan: Using final fallback workspace path: ${finalFallback}`);
+            }
+            return finalFallback;
         }
         
         throw new Error('WordPress installation not found! Please set tinkersan.projectPath in settings or create a .tinkersan config file.');
@@ -71,6 +124,31 @@ export class PhpExecutor {
 
     private _getFrameworkBootstrapper(): FrameworkBootstrapper {
         const projectPath = this._getProjectPath();
+        const frameworkName = this._getFrameworkName();
+        
+        if (frameworkName === 'auto') {
+            // Auto-detect framework
+            const bootstrapper = FrameworkBootstrapperFactory.detect(projectPath);
+            if (bootstrapper) {
+                return bootstrapper;
+            }
+            // Fall back to generic PHP if no framework detected
+            return FrameworkBootstrapperFactory.getByName('PHP') || new GenericPhpBootstrapper();
+        } else {
+            // Use specified framework
+            const bootstrapper = FrameworkBootstrapperFactory.getByName(frameworkName);
+            if (bootstrapper) {
+                return bootstrapper;
+            }
+            // Fall back to generic PHP if specified framework not found
+            return FrameworkBootstrapperFactory.getByName('PHP') || new GenericPhpBootstrapper();
+        }
+    }
+
+    /**
+     * Get framework bootstrapper for a specific project path (context-aware)
+     */
+    private _getFrameworkBootstrapperForContext(projectPath: string): FrameworkBootstrapper {
         const frameworkName = this._getFrameworkName();
         
         if (frameworkName === 'auto') {
@@ -118,8 +196,9 @@ export class PhpExecutor {
 
     public async execute(code: string): Promise<string> {
         try {
-            const projectPath = this._getProjectPath();
-            const bootstrapper = this._getFrameworkBootstrapper();
+            // Use context-aware detection for execution to support multiple WordPress installations
+            const projectPath = this._getProjectPathForCurrentContext();
+            const bootstrapper = this._getFrameworkBootstrapperForContext(projectPath);
             const bootstrapCode = bootstrapper.getBootstrapCode(projectPath);
 
             // Remove PHP opening tag if present
