@@ -122,11 +122,65 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
+    // Register debug command for multiple WordPress detection
+    const debugMultipleWpCommand = vscode.commands.registerCommand('tinkersan.debugMultipleWordPress', async () => {
+        try {
+            const { WordPressDetector } = await import('./utils/WordPressDetector');
+            
+            // Enable verbose logging temporarily
+            const config = vscode.workspace.getConfiguration('tinkersan');
+            const originalVerbose = config.get<boolean>('verboseLogging', false);
+            await config.update('verboseLogging', true, vscode.ConfigurationTarget.Workspace);
+            
+            // Show debug output
+            WordPressDetector.showDebugOutput();
+            
+            // Test both detection methods
+            const allRoots = WordPressDetector.findAllWordPressRoots();
+            const contextRoot = WordPressDetector.autoDetectWordPressRootForCurrentContext();
+            
+            const message = `
+=== Multiple WordPress Detection Debug ===
+
+All WordPress installations found:
+${allRoots.map((root, index) => `${index + 1}. ${root}`).join('\n')}
+
+Context-aware detection result:
+${contextRoot || 'None detected'}
+
+Current active file:
+${vscode.window.activeTextEditor?.document.uri.fsPath || 'No active file'}
+
+Check the "Tinkersan Debug" output channel for detailed logs.
+`;
+
+            vscode.window.showInformationMessage('Debug info generated. Check output channel.', 'Show Output').then(selection => {
+                if (selection === 'Show Output') {
+                    WordPressDetector.showDebugOutput();
+                }
+            });
+
+            // Also show in a new document
+            const doc = await vscode.workspace.openTextDocument({
+                content: message,
+                language: 'plaintext'
+            });
+            await vscode.window.showTextDocument(doc);
+            
+            // Restore original verbose setting
+            await config.update('verboseLogging', originalVerbose, vscode.ConfigurationTarget.Workspace);
+            
+        } catch (error) {
+            vscode.window.showErrorMessage(`Debug failed: ${error}`);
+        }
+    });
+
     context.subscriptions.push(
         newFileCommand,
         runCommand,
         createConfigCommand,
         showDebugLogCommand,
+        debugMultipleWpCommand,
         outputChannel
     );
 }

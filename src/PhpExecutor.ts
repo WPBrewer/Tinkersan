@@ -201,6 +201,16 @@ export class PhpExecutor {
             const bootstrapper = this._getFrameworkBootstrapperForContext(projectPath);
             const bootstrapCode = bootstrapper.getBootstrapCode(projectPath);
 
+            // Show debug info in output
+            const debugInfo = `
+=== Tinkersan Debug Info ===
+Current file: ${vscode.window.activeTextEditor?.document.uri.fsPath || 'No active file'}
+Detected WordPress root: ${projectPath}
+Framework: ${bootstrapper.getName()}
+============================
+
+`;
+
             // Remove PHP opening tag if present
             const cleanUserCodeRaw = code.replace(/^<\?php\s*/i, '').trim();
 
@@ -254,7 +264,8 @@ ${cleanUserCode}
                 maxBuffer: 1024 * 1024 * 10 // 10 MB
             });
 
-            return output.trim() || `Code executed successfully with framework: ${bootstrapper.getName()} (no output)`;
+            const result = output.trim() || `Code executed successfully with framework: ${bootstrapper.getName()} (no output)`;
+            return debugInfo + result;
         } catch (error: any) {
             // PHP errors come through stderr
             if (error.stderr) {

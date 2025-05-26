@@ -61,19 +61,30 @@ export class WordPressDetector {
      */
     public static isWordPressRoot(dirPath: string): boolean {
         try {
+            this.log(`Checking if ${dirPath} is a WordPress root...`);
+            
             // Check for at least 2 signature files
-            const foundFiles = this.WP_SIGNATURE_FILES.filter(file => 
-                fs.existsSync(path.join(dirPath, file))
-            );
+            const foundFiles = this.WP_SIGNATURE_FILES.filter(file => {
+                const filePath = path.join(dirPath, file);
+                const exists = fs.existsSync(filePath);
+                this.log(`  - ${file}: ${exists ? '✅' : '❌'}`);
+                return exists;
+            });
             
             // Check for at least 2 signature directories
             const foundDirs = this.WP_SIGNATURE_DIRS.filter(dir => {
                 const dirFullPath = path.join(dirPath, dir);
-                return fs.existsSync(dirFullPath) && fs.statSync(dirFullPath).isDirectory();
+                const exists = fs.existsSync(dirFullPath) && fs.statSync(dirFullPath).isDirectory();
+                this.log(`  - ${dir}/: ${exists ? '✅' : '❌'}`);
+                return exists;
             });
 
-            return foundFiles.length >= 2 && foundDirs.length >= 2;
+            const isWpRoot = foundFiles.length >= 2 && foundDirs.length >= 2;
+            this.log(`  Result: ${isWpRoot ? '✅ IS WordPress root' : '❌ NOT WordPress root'} (files: ${foundFiles.length}/3, dirs: ${foundDirs.length}/3)`);
+            
+            return isWpRoot;
         } catch (error) {
+            this.log(`  Error checking ${dirPath}: ${error}`);
             return false;
         }
     }
@@ -519,6 +530,8 @@ export class WordPressDetector {
         this.log('Step 3: Finding all WordPress installations in workspace...');
         const allWordPressRoots = this.findAllWordPressRoots();
         
+        this.log(`Found WordPress installations: ${JSON.stringify(allWordPressRoots)}`, true);
+        
         if (allWordPressRoots.length === 0) {
             this.log('❌ No WordPress installations found', true);
             return null;
@@ -537,19 +550,31 @@ export class WordPressDetector {
             let closestRoot: string | null = null;
             let shortestDistance = Infinity;
 
+            this.log(`Analyzing distance from current file: ${currentFilePath}`, true);
+            
             for (const wpRoot of allWordPressRoots) {
+                this.log(`Checking WordPress root: ${wpRoot}`);
+                
                 if (currentFilePath.startsWith(wpRoot)) {
-                    const distance = currentFilePath.replace(wpRoot, '').split(path.sep).length;
+                    const relativePath = currentFilePath.replace(wpRoot, '');
+                    const distance = relativePath.split(path.sep).filter(part => part.length > 0).length;
+                    this.log(`  - File is inside this WordPress root, distance: ${distance}`);
+                    
                     if (distance < shortestDistance) {
                         shortestDistance = distance;
                         closestRoot = wpRoot;
+                        this.log(`  - This is now the closest root (distance: ${distance})`);
                     }
+                } else {
+                    this.log(`  - File is NOT inside this WordPress root`);
                 }
             }
 
             if (closestRoot) {
-                this.log(`✅ Closest WordPress root to current file: ${closestRoot}`, true);
+                this.log(`✅ Closest WordPress root to current file: ${closestRoot} (distance: ${shortestDistance})`, true);
                 return closestRoot;
+            } else {
+                this.log(`❌ Current file is not inside any WordPress installation`, true);
             }
         }
 
@@ -569,10 +594,41 @@ export class WordPressDetector {
             return wordpressRoots;
         }
 
+        this.log('=== Searching for all WordPress installations ===', true);
+
         for (const folder of workspaceFolders) {
+            this.log(`Checking workspace folder: ${folder.uri.fsPath}`);
+            
             // Check workspace root
             if (this.isWordPressRoot(folder.uri.fsPath)) {
+                this.log(`✅ WordPress found at workspace root: ${folder.uri.fsPath}`);
                 wordpressRoots.push(folder.uri.fsPath);
+            }
+
+            // Check direct subdirectories first (common case for multiple WordPress installations)
+            try {
+                const entries = fs.readdirSync(folder.uri.fsPath, { withFileTypes: true });
+                
+                for (const entry of entries) {
+                    if (entry.isDirectory()) {
+                        const fullPath = path.join(folder.uri.fsPath, entry.name);
+                        
+                        // Skip common non-WordPress directories
+                        if (entry.name.startsWith('.') || 
+                            entry.name === 'node_modules' || 
+                            entry.name === 'vendor') {
+                            continue;
+                        }
+
+                        this.log(`Checking subdirectory: ${fullPath}`);
+                        if (this.isWordPressRoot(fullPath)) {
+                            this.log(`✅ WordPress found at: ${fullPath}`);
+                            wordpressRoots.push(fullPath);
+                        }
+                    }
+                }
+            } catch (error) {
+                this.log(`Error reading workspace directory: ${error}`);
             }
 
             // Check common subdirectories
@@ -587,17 +643,21 @@ export class WordPressDetector {
 
             for (const subPath of commonPaths) {
                 const fullPath = path.join(folder.uri.fsPath, subPath);
+                this.log(`Checking common path: ${fullPath}`);
                 if (fs.existsSync(fullPath) && this.isWordPressRoot(fullPath)) {
+                    this.log(`✅ WordPress found at common path: ${fullPath}`);
                     wordpressRoots.push(fullPath);
                 }
             }
 
-            // Recursively search for WordPress installations
-            this.searchWordPressRootsRecursively(folder.uri.fsPath, wordpressRoots, 3); // Max depth of 3
+            // Recursively search for WordPress installations (with limited depth)
+            this.searchWordPressRootsRecursively(folder.uri.fsPath, wordpressRoots, 2); // Reduced depth to 2
         }
 
         // Remove duplicates
-        return [...new Set(wordpressRoots)];
+        const uniqueRoots = [...new Set(wordpressRoots)];
+        this.log(`Final WordPress installations found: ${JSON.stringify(uniqueRoots)}`, true);
+        return uniqueRoots;
     }
 
     /**

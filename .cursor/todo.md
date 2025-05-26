@@ -40,6 +40,54 @@ Tinkersan now supports workspaces with multiple WordPress installations. The ext
 - **Plugin-specific configs**: Configs in plugin directories take priority when editing plugin files
 - **Automatic detection**: No manual configuration needed - works out of the box with multiple WordPress sites
 
+## Testing and Debugging
+
+### Debug Commands
+
+1. **`Tinkersan: Debug Multiple WordPress Detection`** - Shows all detected WordPress installations and which one is selected for the current context
+2. **`Tinkersan: Show Debug Log`** - Shows detailed detection logs
+3. Enable **verbose logging** in settings for detailed detection process logs
+
+### Testing Steps
+
+1. **Copy the test file**: Copy `examples/test-multiple-wp.php` to each WordPress installation's `.tinkersan` folder
+2. **Test each installation**:
+   - Open the test file in the first WordPress installation
+   - Run the code (Ctrl+Enter / Cmd+Enter)
+   - Note the WordPress root, site URL, and database name
+   - Open the test file in the second WordPress installation
+   - Run the code again
+   - Compare the output - they should show different WordPress installations
+
+### Expected Behavior
+
+When working correctly, you should see:
+- Different WordPress root paths
+- Different site URLs
+- Different database names
+- Different active plugins (if the installations have different plugins)
+
+### Troubleshooting
+
+If you're getting the same WordPress installation for different files:
+
+1. **Enable verbose logging**: Set `tinkersan.verboseLogging` to `true` in settings
+2. **Run the debug command**: Use `Tinkersan: Debug Multiple WordPress Detection`
+3. **Check the debug output**: Look for detection logs in the "Tinkersan Debug" output channel
+4. **Verify WordPress signatures**: Make sure each WordPress installation has the required files:
+   - `wp-config.php`
+   - `wp-load.php`
+   - `wp-settings.php`
+   - `wp-content/` directory
+   - `wp-includes/` directory
+   - `wp-admin/` directory
+
+### Common Issues
+
+1. **WordPress not detected**: Check if the directory has all required WordPress signature files
+2. **Wrong WordPress selected**: The detection prioritizes the WordPress installation closest to your current file
+3. **Same URL for different installations**: This indicates the same WordPress installation is being used - check the detection logs
+
 ## Example Workspace Structure
 
 ```

@@ -13,11 +13,19 @@ export class WordPressBootstrapper implements FrameworkBootstrapper {
         // Find wp-load.php file
         const wpLoadPath = path.join(basePath, 'wp-load.php');
         
+        // Normalize path separators for cross-platform compatibility
+        const normalizedWpLoadPath = wpLoadPath.replace(/\\/g, '/');
+        const normalizedBasePath = basePath.replace(/\\/g, '/');
+        
         // Return PHP code to bootstrap WordPress
         return `
-// Bootstrap WordPress
-if (!file_exists('${wpLoadPath}')) {
-    die('WordPress wp-load.php not found at ${wpLoadPath}. Check your path configuration.');
+// Bootstrap WordPress from: ${normalizedBasePath}
+echo "\\n=== WordPress Bootstrap Debug ===\\n";
+echo "WordPress root: ${normalizedBasePath}\\n";
+echo "wp-load.php path: ${normalizedWpLoadPath}\\n";
+
+if (!file_exists('${normalizedWpLoadPath}')) {
+    die('WordPress wp-load.php not found at ${normalizedWpLoadPath}. Check your path configuration.');
 }
 
 // Turn off any output buffering
@@ -26,7 +34,17 @@ while (ob_get_level()) {
 }
 
 // Require WordPress core
-require_once '${wpLoadPath}';
+require_once '${normalizedWpLoadPath}';
+
+// Check if WordPress loaded correctly
+if (!function_exists('wp_get_current_user')) {
+    die('WordPress did not load correctly from ${normalizedWpLoadPath}');
+}
+
+echo "WordPress loaded successfully!\\n";
+echo "Site URL: " . get_option('siteurl') . "\\n";
+echo "Home URL: " . get_option('home') . "\\n";
+echo "================================\\n\\n";
 
 // IMPORTANT: Ensure WordPress is fully loaded
 // This is crucial for plugin classes to be available
