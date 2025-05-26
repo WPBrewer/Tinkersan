@@ -2,7 +2,7 @@
   "name": "tinkersan",
   "displayName": "Tinkersan",
   "description": "Testing and debugging PHP applications made easy!",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "publisher": "WPBrewer",
   "repository": {
     "type": "git",
