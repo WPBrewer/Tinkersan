@@ -21,6 +21,9 @@ WP Console: https://wordpress.org/plugins/wp-console/
 - [x] WordPress native plugin loading - relies on WordPress's built-in plugin system
 - [x] Debug helper function for troubleshooting class loading issues
 - [x] **Multiple WordPress installations support** - Context-aware detection and bootstrapping
+- [x] **Clean debug output** - Debug information moved to dedicated debug channel instead of main output
+- [x] **Enhanced debug information** - When `TINKERSAN_DEBUG` is defined, shows config source, WordPress root, site URL, home URL, database name, and WordPress version
+- [x] **Enhanced debug information** - When `TINKERSAN_DEBUG` is defined, shows config source, WordPress root, site URL, home URL, database name, and WordPress version
 
 # Multiple WordPress Installations Support
 
@@ -58,6 +61,28 @@ Tinkersan now supports workspaces with multiple WordPress installations. The ext
    - Open the test file in the second WordPress installation
    - Run the code again
    - Compare the output - they should show different WordPress installations
+
+### Enhanced Debug Information
+
+To get detailed information about which WordPress installation and config is being used:
+
+1. **Add debug constant**: Include `define('TINKERSAN_DEBUG', true);` at the top of your PHP code
+2. **Run your code**: The debug information will be displayed showing:
+   - WordPress Root path
+   - Config source (which .tinkersan.json file was used)
+   - Site URL and Home URL
+   - Database name
+   - WordPress version
+   - Bootstrap status
+
+Example:
+```php
+<?php
+define('TINKERSAN_DEBUG', true);
+echo home_url();
+```
+
+This will show detailed debug information before executing your code, helping you verify which WordPress installation is being used.
 
 ### Expected Behavior
 

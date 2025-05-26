@@ -174,6 +174,20 @@ export class PhpExecutor {
         return this._getProjectPath();
     }
 
+    /**
+     * Log execution debug information to the debug output channel
+     */
+    private logExecutionDebugInfo(projectPath: string, frameworkName: string): void {
+        const currentFile = vscode.window.activeTextEditor?.document.uri.fsPath || 'No active file';
+        
+        // Use WordPressDetector's logging mechanism to send to debug channel
+        WordPressDetector.log(`=== Tinkersan Execution Debug ===`, true);
+        WordPressDetector.log(`Current file: ${currentFile}`, true);
+        WordPressDetector.log(`Detected WordPress root: ${projectPath}`, true);
+        WordPressDetector.log(`Framework: ${frameworkName}`, true);
+        WordPressDetector.log(`================================`, true);
+    }
+
     private getTinkerPath(): string {
         const projectPath = this._getProjectPath();
         const tinkerPath = path.join(projectPath, '.tinkersan');
@@ -199,17 +213,23 @@ export class PhpExecutor {
             // Use context-aware detection for execution to support multiple WordPress installations
             const projectPath = this._getProjectPathForCurrentContext();
             const bootstrapper = this._getFrameworkBootstrapperForContext(projectPath);
+            
+            // Detect which config was used for debug information
+            const activeEditor = vscode.window.activeTextEditor;
+            const currentFilePath = activeEditor?.document.uri.fsPath;
+            let configSource = 'Auto-detected';
+            
+            if (currentFilePath) {
+                const contextConfig = WordPressDetector.findTinkersanConfigForFile(currentFilePath);
+                if (contextConfig) {
+                    configSource = contextConfig;
+                }
+            }
+            
             const bootstrapCode = bootstrapper.getBootstrapCode(projectPath);
 
-            // Show debug info in output
-            const debugInfo = `
-=== Tinkersan Debug Info ===
-Current file: ${vscode.window.activeTextEditor?.document.uri.fsPath || 'No active file'}
-Detected WordPress root: ${projectPath}
-Framework: ${bootstrapper.getName()}
-============================
-
-`;
+            // Log debug info to debug channel instead of main output
+            this.logExecutionDebugInfo(projectPath, bootstrapper.getName());
 
             // Remove PHP opening tag if present
             const cleanUserCodeRaw = code.replace(/^<\?php\s*/i, '').trim();
@@ -228,6 +248,10 @@ Framework: ${bootstrapper.getName()}
             const script = `<?php
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
+
+// Define Tinkersan debug constants
+define('TINKERSAN_CONFIG_SOURCE', '${configSource.replace(/\\/g, '/')}');
+define('TINKERSAN_PROJECT_PATH', '${projectPath.replace(/\\/g, '/')}');
 
 // Pretty print function for Tinkersan
 function _tinkersan_dump($value, $return = false) {
@@ -265,7 +289,7 @@ ${cleanUserCode}
             });
 
             const result = output.trim() || `Code executed successfully with framework: ${bootstrapper.getName()} (no output)`;
-            return debugInfo + result;
+            return result;
         } catch (error: any) {
             // PHP errors come through stderr
             if (error.stderr) {

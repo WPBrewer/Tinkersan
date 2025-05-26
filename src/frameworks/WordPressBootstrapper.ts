@@ -9,21 +9,18 @@ export class WordPressBootstrapper implements FrameworkBootstrapper {
         return WordPressDetector.isWordPressRoot(basePath);
     }
     
-    public getBootstrapCode(basePath: string): string {
+    public getBootstrapCode(basePath: string, configPath?: string): string {
         // Find wp-load.php file
         const wpLoadPath = path.join(basePath, 'wp-load.php');
         
         // Normalize path separators for cross-platform compatibility
         const normalizedWpLoadPath = wpLoadPath.replace(/\\/g, '/');
         const normalizedBasePath = basePath.replace(/\\/g, '/');
+        const normalizedConfigPath = configPath ? configPath.replace(/\\/g, '/') : 'Auto-detected';
         
         // Return PHP code to bootstrap WordPress
         return `
 // Bootstrap WordPress from: ${normalizedBasePath}
-echo "\\n=== WordPress Bootstrap Debug ===\\n";
-echo "WordPress root: ${normalizedBasePath}\\n";
-echo "wp-load.php path: ${normalizedWpLoadPath}\\n";
-
 if (!file_exists('${normalizedWpLoadPath}')) {
     die('WordPress wp-load.php not found at ${normalizedWpLoadPath}. Check your path configuration.');
 }
@@ -40,11 +37,6 @@ require_once '${normalizedWpLoadPath}';
 if (!function_exists('wp_get_current_user')) {
     die('WordPress did not load correctly from ${normalizedWpLoadPath}');
 }
-
-echo "WordPress loaded successfully!\\n";
-echo "Site URL: " . get_option('siteurl') . "\\n";
-echo "Home URL: " . get_option('home') . "\\n";
-echo "================================\\n\\n";
 
 // IMPORTANT: Ensure WordPress is fully loaded
 // This is crucial for plugin classes to be available
@@ -218,11 +210,19 @@ $tinkersan->debug_class = 'tinkersan_debug_class';
 
 // Show WordPress initialization status
 if (defined('TINKERSAN_DEBUG') && TINKERSAN_DEBUG) {
-    echo "WordPress Bootstrap Status:\\n";
+    echo "=== Tinkersan WordPress Debug Information ===\\n";
+    echo "WordPress Root: " . (defined('TINKERSAN_PROJECT_PATH') ? TINKERSAN_PROJECT_PATH : '${normalizedBasePath}') . "\\n";
+    echo "Config Source: " . (defined('TINKERSAN_CONFIG_SOURCE') ? TINKERSAN_CONFIG_SOURCE : 'Auto-detected') . "\\n";
+    echo "Site URL: " . site_url() . "\\n";
+    echo "Home URL: " . home_url() . "\\n";
+    echo "Database Name: " . (defined('DB_NAME') ? DB_NAME : 'Unknown') . "\\n";
+    echo "WordPress Version: " . (function_exists('get_bloginfo') ? get_bloginfo('version') : 'Unknown') . "\\n";
+    echo "\\nWordPress Bootstrap Status:\\n";
     echo "- wp-load.php loaded: Yes\\n";
     echo "- plugins_loaded action: " . (did_action('plugins_loaded') ? 'Yes' : 'No') . "\\n";
     echo "- init action: " . (did_action('init') ? 'Yes' : 'No') . "\\n";
-    echo "- Active plugins: " . count(get_option('active_plugins', [])) . "\\n\\n";
+    echo "- Active plugins: " . count(get_option('active_plugins', [])) . "\\n";
+    echo "============================================\\n\\n";
 }
 `;
     }

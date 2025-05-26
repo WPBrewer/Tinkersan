@@ -18,7 +18,7 @@ export class WordPressDetector {
     /**
      * Log debug information if verbose logging is enabled
      */
-    private static log(message: string, force: boolean = false): void {
+    public static log(message: string, force: boolean = false): void {
         const config = vscode.workspace.getConfiguration('tinkersan');
         const verboseLogging = config.get<boolean>('verboseLogging', false);
         
@@ -698,7 +698,7 @@ export class WordPressDetector {
     /**
      * Find .tinkersan config file closest to a specific file
      */
-    private static findTinkersanConfigForFile(filePath: string): string | null {
+    public static findTinkersanConfigForFile(filePath: string): string | null {
         const configNames = ['.tinkersan.json', 'tinkersan.json'];
         let currentDir = path.dirname(filePath);
         const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;

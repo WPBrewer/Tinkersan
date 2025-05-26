@@ -1,7 +1,7 @@
 {
   "name": "tinkersan",
   "displayName": "Tinkersan",
-  "description": "PHP Tinker for VS Code - Test and debug WordPress made easy!",
+  "description": "Testing and debugging PHP applications made easy!",
   "version": "0.0.5",
   "publisher": "WPBrewer",
   "repository": {
@@ -14,6 +14,7 @@
     "php",
     "laravel",
     "tinker",
+    "tinkersan",
     "debug",
     "woocommerce"
   ],
